@@ -33,7 +33,9 @@ const connectDB = async () => {
     
     // Sync database in development
     if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
+      // Use alter: false to avoid index accumulation issues
+      // Run npm run init to properly initialize tables
+      await sequelize.sync({ alter: false });
       console.log('🔄 Database synchronized');
     }
   } catch (error) {

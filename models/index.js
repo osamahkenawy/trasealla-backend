@@ -15,7 +15,25 @@ const Contact = require('./Contact');
 const Newsletter = require('./Newsletter');
 const Blog = require('./Blog');
 
+// Phase 1 - Core Foundation Models
+const Agency = require('./Agency');
+const Branch = require('./Branch');
+const Role = require('./Role');
+const AuditLog = require('./AuditLog');
+const Page = require('./Page');
+const MediaLibrary = require('./MediaLibrary');
+const Currency = require('./Currency');
+const Translation = require('./Translation');
+
+// Phase 3 - Lead Management
+const Lead = require('./Lead');
+const LeadActivity = require('./LeadActivity');
+
 // Define associations
+
+// Agency & Branch associations
+Agency.hasMany(Branch, { foreignKey: 'agencyId', as: 'branches' });
+Branch.belongsTo(Agency, { foreignKey: 'agencyId', as: 'agency' });
 
 // User associations
 User.hasMany(Booking, { foreignKey: 'userId', as: 'bookings' });
@@ -23,6 +41,9 @@ User.hasMany(Review, { foreignKey: 'userId', as: 'reviews' });
 User.hasMany(VisaApplication, { foreignKey: 'userId', as: 'visaApplications' });
 User.hasMany(Payment, { foreignKey: 'userId', as: 'payments' });
 User.hasMany(Blog, { foreignKey: 'authorId', as: 'blogs' });
+User.hasMany(AuditLog, { foreignKey: 'userId', as: 'auditLogs' });
+User.belongsTo(Role, { foreignKey: 'roleId', as: 'roleDetails' });
+User.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
 
 // Destination associations
 Destination.hasMany(Activity, { foreignKey: 'destinationId', as: 'activityList' });
@@ -54,6 +75,34 @@ Contact.belongsTo(User, { foreignKey: 'userId', as: 'user', constraints: false }
 // Blog associations
 Blog.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 
+// Page associations
+Page.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
+Page.belongsTo(Page, { foreignKey: 'parentId', as: 'parent' });
+Page.hasMany(Page, { foreignKey: 'parentId', as: 'children' });
+
+// Media Library associations
+MediaLibrary.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
+
+// Audit Log associations
+AuditLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+AuditLog.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+
+// Role associations
+Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
+
+// Translation associations
+Translation.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer' });
+
+// Lead associations
+Lead.belongsTo(User, { foreignKey: 'assignedTo', as: 'assignee' });
+Lead.belongsTo(User, { foreignKey: 'assignedBy', as: 'assigner' });
+Lead.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+Lead.hasMany(LeadActivity, { foreignKey: 'leadId', as: 'activities' });
+
+// Lead Activity associations
+LeadActivity.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
+LeadActivity.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 // Export models and sequelize instance
 module.exports = {
   sequelize,
@@ -69,5 +118,17 @@ module.exports = {
   VisaApplication,
   Contact,
   Newsletter,
-  Blog
+  Blog,
+  // Phase 1 Models
+  Agency,
+  Branch,
+  Role,
+  AuditLog,
+  Page,
+  MediaLibrary,
+  Currency,
+  Translation,
+  // Phase 3 Models
+  Lead,
+  LeadActivity
 };

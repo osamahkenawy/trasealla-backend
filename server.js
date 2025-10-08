@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001; // Changed to 5001 to avoid conflict with AirPlay on macOS
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -25,9 +25,16 @@ const contactRoutes = require('./routes/contact');
 const newsletterRoutes = require('./routes/newsletter');
 const reviewRoutes = require('./routes/reviews');
 
+// Phase 1 - Core Foundation routes
+const agencyRoutes = require('./routes/agency');
+const roleRoutes = require('./routes/roles');
+const cmsRoutes = require('./routes/cms');
+const auditRoutes = require('./routes/audit');
+
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { connectDB } = require('./config/database');
+const { detectLanguage } = require('./middleware/i18n');
 
 // CORS configuration - MUST be before helmet and other middleware
 const corsOptions = {
@@ -85,6 +92,9 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+// i18n middleware
+app.use(detectLanguage);
+
 // Static files
 app.use('/uploads', express.static('uploads'));
 
@@ -112,6 +122,12 @@ app.use('/api/content', contentRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/reviews', reviewRoutes);
+
+// Phase 1 - Core Foundation routes
+app.use('/api/agency', agencyRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/cms', cmsRoutes);
+app.use('/api/audit', auditRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
