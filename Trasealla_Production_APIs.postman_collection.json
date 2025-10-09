@@ -1,0 +1,958 @@
+{
+  "info": {
+    "name": "Trasealla - Production APIs",
+    "description": "Production-ready travel agency APIs - Flights, Hotels, Tours, Visas, Payments & More",
+    "_postman_id": "trasealla-prod-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication & Users",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.environment.set('authToken', jsonData.data.token);",
+                  "        pm.environment.set('userId', jsonData.data.user.id);",
+                  "        console.log('✅ Token saved:', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('authToken', jsonData.data.token);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "    pm.environment.set('userId', jsonData.data.user.id);",
+                  "    console.log('✅ Logged in as:', jsonData.data.user.role);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@trasealla.com\",\n  \"password\": \"Admin123456!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"nationality\": \"US\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "✈️ Flights (Amadeus)",
+      "description": "Complete flight booking system powered by Amadeus",
+      "item": [
+        {
+          "name": "1️⃣ Search Flights",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/search?origin=JFK&destination=DXB&departureDate=2025-12-15&adults=2&travelClass=ECONOMY&currencyCode=AED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "search"],
+              "query": [
+                {"key": "origin", "value": "JFK", "description": "Origin airport (IATA code)"},
+                {"key": "destination", "value": "DXB", "description": "Destination airport"},
+                {"key": "departureDate", "value": "2025-12-15", "description": "YYYY-MM-DD"},
+                {"key": "returnDate", "value": "2025-12-22", "disabled": true, "description": "For round trip"},
+                {"key": "adults", "value": "2"},
+                {"key": "children", "value": "0", "disabled": true},
+                {"key": "travelClass", "value": "ECONOMY", "description": "ECONOMY, BUSINESS, FIRST"},
+                {"key": "currencyCode", "value": "AED"},
+                {"key": "nonStop", "value": "false", "disabled": true},
+                {"key": "maxResults", "value": "50", "disabled": true}
+              ]
+            },
+            "description": "Search available flights - No authentication required"
+          }
+        },
+        {
+          "name": "2️⃣ Confirm Price",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('confirmedFlightOffer', JSON.stringify(jsonData.data));",
+                  "    console.log('✅ Price confirmed. Ready to book.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/confirm-price",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "confirm-price"]
+            },
+            "description": "Confirm current price before booking (paste flight offer from search)"
+          }
+        },
+        {
+          "name": "3️⃣ Get Seat Maps",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/seat-maps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "seat-maps"]
+            }
+          }
+        },
+        {
+          "name": "4️⃣ Book Flight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('flightOrderId', jsonData.data.order.orderNumber);",
+                  "    pm.environment.set('pnr', jsonData.data.order.pnr);",
+                  "    console.log('✅ Flight booked! PNR:', jsonData.data.order.pnr);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}},\n  \"travelers\": [\n    {\n      \"firstName\": \"JOHN\",\n      \"lastName\": \"DOE\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"gender\": \"MALE\",\n      \"email\": \"john@example.com\",\n      \"phoneCountryCode\": \"1\",\n      \"phoneNumber\": \"1234567890\",\n      \"documents\": [\n        {\n          \"documentType\": \"PASSPORT\",\n          \"number\": \"AB123456\",\n          \"expiryDate\": \"2030-01-01\",\n          \"issuanceCountry\": \"US\",\n          \"nationality\": \"US\",\n          \"holder\": true\n        }\n      ]\n    }\n  ],\n  \"contacts\": {\n    \"email\": \"john@example.com\",\n    \"phone\": \"+11234567890\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/create-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "create-order"]
+            }
+          }
+        },
+        {
+          "name": "Get My Flight Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/my-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "my-orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Order by PNR",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{pnr}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{pnr}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Flight Order",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Search Locations (Autocomplete)",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/locations?keyword=Dubai",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "locations"],
+              "query": [{"key": "keyword", "value": "Dubai"}]
+            }
+          }
+        },
+        {
+          "name": "Price Analysis",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/price-analysis?origin=JFK&destination=DXB&departureDate=2025-12-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "price-analysis"],
+              "query": [
+                {"key": "origin", "value": "JFK"},
+                {"key": "destination", "value": "DXB"},
+                {"key": "departureDate", "value": "2025-12-15"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Flight Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📧 Contact & Communication",
+      "item": [
+        {
+          "name": "Submit Contact Form",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+1234567890\",\n  \"subject\": \"Inquiry about Dubai packages\",\n  \"message\": \"I'm interested in your 5-day Dubai package for 4 people.\",\n  \"inquiryType\": \"booking\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contact"]
+            }
+          }
+        },
+        {
+          "name": "Get All Contacts (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/contact?status=new&inquiryType=booking",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contact"],
+              "query": [
+                {"key": "status", "value": "new"},
+                {"key": "inquiryType", "value": "booking"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Respond to Contact (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response\": \"Thank you for your inquiry. We have excellent Dubai packages available. I'll send you details shortly.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contact/1/respond",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contact", "1", "respond"]
+            }
+          }
+        },
+        {
+          "name": "Newsletter Subscribe",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"subscriber@example.com\",\n  \"name\": \"Jane Smith\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/subscribe",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", "subscribe"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 User Management (Admin)",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "role", "value": "customer", "disabled": true},
+                {"key": "search", "value": "", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update User Status",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "3", "status"]
+            },
+            "description": "Status: active, inactive, suspended"
+          }
+        },
+        {
+          "name": "Get User Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/stats/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "stats", "all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏨 Hotels",
+      "description": "Hotel search and booking",
+      "item": [
+        {
+          "name": "Search Hotels",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels/search?destination=Dubai&checkIn=2025-12-15&checkOut=2025-12-20&adults=2&rooms=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hotels", "search"],
+              "query": [
+                {"key": "destination", "value": "Dubai"},
+                {"key": "checkIn", "value": "2025-12-15"},
+                {"key": "checkOut", "value": "2025-12-20"},
+                {"key": "adults", "value": "2"},
+                {"key": "rooms", "value": "1"},
+                {"key": "starRating", "value": "4", "disabled": true},
+                {"key": "minPrice", "value": "50", "disabled": true},
+                {"key": "maxPrice", "value": "500", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Hotel Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels/123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hotels", "123"]
+            }
+          }
+        },
+        {
+          "name": "Book Hotel",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hotelId\": 123,\n  \"roomId\": \"deluxe-123\",\n  \"checkIn\": \"2025-12-15\",\n  \"checkOut\": \"2025-12-20\",\n  \"guests\": [\n    {\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"email\": \"john@example.com\"\n    }\n  ],\n  \"specialRequests\": \"Late check-in\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/hotels/book",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hotels", "book"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏖️ Tours & Destinations",
+      "item": [
+        {
+          "name": "Get All Destinations",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "isPopular", "value": "true", "disabled": true},
+                {"key": "country", "value": "UAE", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Destination by ID",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/destinations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "destinations", "1"]
+            }
+          }
+        },
+        {
+          "name": "Search Tours",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tours?category=Adventure&minPrice=100&maxPrice=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tours"],
+              "query": [
+                {"key": "category", "value": "Adventure"},
+                {"key": "minPrice", "value": "100"},
+                {"key": "maxPrice", "value": "1000"},
+                {"key": "duration", "value": "5", "disabled": true},
+                {"key": "isFeatured", "value": "true", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tour Details",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tours/123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tours", "123"]
+            }
+          }
+        },
+        {
+          "name": "Book Tour",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tourId\": 123,\n  \"travelDate\": \"2025-12-15\",\n  \"numberOfPeople\": 2,\n  \"travelers\": [\n    {\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"email\": \"john@example.com\",\n      \"phone\": \"+1234567890\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tours/book",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tours", "book"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛂 Visa Services",
+      "description": "Visa application and processing",
+      "item": [
+        {
+          "name": "Get Visa Requirements",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/visas/requirements?nationality=US&destination=UAE&visaType=tourist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visas", "requirements"],
+              "query": [
+                {"key": "nationality", "value": "US"},
+                {"key": "destination", "value": "UAE"},
+                {"key": "visaType", "value": "tourist"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Visa Application",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "visaType", "value": "tourist", "type": "text"},
+                {"key": "destinationCountry", "value": "UAE", "type": "text"},
+                {"key": "applicantData", "value": "{\"firstName\":\"John\",\"lastName\":\"Doe\",\"passportNumber\":\"AB123456\"}", "type": "text"},
+                {"key": "passport", "type": "file", "src": "/path/to/passport.pdf"},
+                {"key": "photo", "type": "file", "src": "/path/to/photo.jpg"}
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visas/apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visas", "apply"]
+            }
+          }
+        },
+        {
+          "name": "Get My Visa Applications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/visas/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visas", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Get Application Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/visas/applications/VISA-2024-001/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visas", "applications", "VISA-2024-001", "status"]
+            }
+          }
+        },
+        {
+          "name": "Update Application Status (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"internalNotes\": \"All documents verified. Visa approved.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/visas/applications/VISA-2024-001/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "visas", "applications", "VISA-2024-001", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Payments",
+      "description": "Payment processing for bookings",
+      "item": [
+        {
+          "name": "💰 Quick Pay (Simplified)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('paymentId', jsonData.data.payment.id);",
+                  "    pm.environment.set('transactionId', jsonData.data.receipt.transactionId);",
+                  "    console.log('✅ Payment completed! Transaction:', jsonData.data.receipt.transactionId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingNumber\": \"BKG-FLT-1759996400529\",\n  \"paymentMethod\": \"card\"\n}",
+              "options": {
+                "raw": {
+                  "description": "Simplified payment - auto-completes payment for a booking"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/quick-pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "quick-pay"]
+            },
+            "description": "⭐ EASIEST - Pay for a booking in one step (development/testing)"
+          }
+        },
+        {
+          "name": "Create Payment Intent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('paymentIntentId', jsonData.data.paymentIntent.id);",
+                  "    pm.environment.set('paymentId', jsonData.data.payment.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"BKG-FLT-1759996400529\",\n  \"amount\": 3755,\n  \"currency\": \"AED\",\n  \"paymentMethod\": \"card\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/create-intent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "create-intent"]
+            },
+            "description": "Step 1: Create payment intent (for Stripe/PayTabs integration)"
+          }
+        },
+        {
+          "name": "Process Payment",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentIntentId\": \"{{paymentIntentId}}\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "process"]
+            },
+            "description": "Step 2: Complete payment (confirms payment method)"
+          }
+        },
+        {
+          "name": "Get Payment History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/history?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "history"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "status", "value": "completed", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Payment Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "{{transactionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Request Refund",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": {{paymentId}},\n  \"amount\": 3755,\n  \"reason\": \"Customer requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "refund"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Bookings",
+      "item": [
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings?status=confirmed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings"],
+              "query": [
+                {"key": "status", "value": "confirmed"},
+                {"key": "type", "value": "flight", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/BKG-123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "BKG-123"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Change of plans\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/BKG-123/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bookings", "BKG-123", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ Reviews & Ratings",
+      "item": [
+        {
+          "name": "Get Reviews for Service",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/tour/123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "tour", "123"]
+            }
+          }
+        },
+        {
+          "name": "Submit Review",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"BKG-123\",\n  \"reviewType\": \"tour\",\n  \"referenceId\": 123,\n  \"rating\": 5,\n  \"title\": \"Amazing Dubai Tour!\",\n  \"comment\": \"Excellent experience, highly recommended!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎫 Activities",
+      "item": [
+        {
+          "name": "Search Activities",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/activities?destinationId=1&category=Adventure",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activities"],
+              "query": [
+                {"key": "destinationId", "value": "1"},
+                {"key": "category", "value": "Adventure"},
+                {"key": "date", "value": "2025-12-15", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Activity Details",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/activities/123",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activities", "123"]
+            }
+          }
+        },
+        {
+          "name": "Book Activity",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityId\": 123,\n  \"date\": \"2025-12-16\",\n  \"timeSlot\": \"09:00\",\n  \"participants\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/activities/book",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activities", "book"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Reports & Analytics (Admin)",
+      "item": [
+        {
+          "name": "Sales Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/sales?startDate=2025-01-01&endDate=2025-12-31&groupBy=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "sales"],
+              "query": [
+                {"key": "startDate", "value": "2025-01-01"},
+                {"key": "endDate", "value": "2025-12-31"},
+                {"key": "groupBy", "value": "month"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Revenue Dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/revenue?period=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "revenue"],
+              "query": [{"key": "period", "value": "month"}]
+            }
+          }
+        },
+        {
+          "name": "Booking Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/bookings-metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "bookings-metrics"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:5001", "type": "string"},
+    {"key": "authToken", "value": "", "type": "string"},
+    {"key": "refreshToken", "value": "", "type": "string"},
+    {"key": "userId", "value": "", "type": "string"},
+    {"key": "flightOrderId", "value": "", "type": "string"},
+    {"key": "pnr", "value": "", "type": "string"},
+    {"key": "confirmedFlightOffer", "value": "{}", "type": "string"}
+  ]
+}

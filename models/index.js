@@ -29,6 +29,9 @@ const Translation = require('./Translation');
 const Lead = require('./Lead');
 const LeadActivity = require('./LeadActivity');
 
+// Phase 7 - Flight Orders
+const FlightOrder = require('./FlightOrder');
+
 // Define associations
 
 // Agency & Branch associations
@@ -103,6 +106,12 @@ Lead.hasMany(LeadActivity, { foreignKey: 'leadId', as: 'activities' });
 LeadActivity.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
 LeadActivity.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// Flight Order associations
+FlightOrder.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+FlightOrder.belongsTo(User, { foreignKey: 'agentId', as: 'agent' });
+FlightOrder.belongsTo(Booking, { foreignKey: 'bookingId', as: 'booking' });
+Booking.hasMany(FlightOrder, { foreignKey: 'bookingId', as: 'flightOrders' });
+
 // Export models and sequelize instance
 module.exports = {
   sequelize,
@@ -130,5 +139,7 @@ module.exports = {
   Translation,
   // Phase 3 Models
   Lead,
-  LeadActivity
+  LeadActivity,
+  // Phase 7 Models
+  FlightOrder
 };
