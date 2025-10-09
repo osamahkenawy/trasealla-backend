@@ -1850,16 +1850,121 @@
             {
               "name": "Search Flights",
               "request": {
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/flights/search?origin=JFK&destination=DXB&departureDate=2024-06-15&adults=2&class=economy",
+                  "raw": "{{baseUrl}}/api/flights/search?origin=JFK&destination=DXB&departureDate=2025-12-15&adults=2&travelClass=ECONOMY",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "flights", "search"],
                   "query": [
                     {
                       "key": "origin",
-                      "value": "JFK"
+                      "value": "JFK",
+                      "description": "Origin airport code (IATA)"
+                    },
+                    {
+                      "key": "destination",
+                      "value": "DXB",
+                      "description": "Destination airport code (IATA)"
+                    },
+                    {
+                      "key": "departureDate",
+                      "value": "2025-12-15",
+                      "description": "Departure date (YYYY-MM-DD)"
+                    },
+                    {
+                      "key": "returnDate",
+                      "value": "2025-12-22",
+                      "description": "Return date for round trip (optional)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "adults",
+                      "value": "2",
+                      "description": "Number of adult passengers"
+                    },
+                    {
+                      "key": "children",
+                      "value": "0",
+                      "description": "Number of children",
+                      "disabled": true
+                    },
+                    {
+                      "key": "infants",
+                      "value": "0",
+                      "description": "Number of infants",
+                      "disabled": true
+                    },
+                    {
+                      "key": "travelClass",
+                      "value": "ECONOMY",
+                      "description": "ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST"
+                    },
+                    {
+                      "key": "nonStop",
+                      "value": "false",
+                      "description": "Only non-stop flights",
+                      "disabled": true
+                    },
+                    {
+                      "key": "currencyCode",
+                      "value": "USD",
+                      "description": "Currency code (ISO 3-letter)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "maxResults",
+                      "value": "50",
+                      "description": "Maximum results to return",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Search for flights using Amadeus API (public endpoint)"
+              }
+            },
+            {
+              "name": "Search Airport/City Locations",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/flights/locations/search?keyword=Dubai",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "flights", "locations", "search"],
+                  "query": [
+                    {
+                      "key": "keyword",
+                      "value": "Dubai",
+                      "description": "City or airport name"
+                    }
+                  ]
+                },
+                "description": "Search for airports and cities (autocomplete)"
+              }
+            },
+            {
+              "name": "Get Flight Price Analysis",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/flights/price-analysis?origin=NYC&destination=DXB&departureDate=2025-12-15",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "flights", "price-analysis"],
+                  "query": [
+                    {
+                      "key": "origin",
+                      "value": "NYC"
                     },
                     {
                       "key": "destination",
@@ -1867,18 +1972,11 @@
                     },
                     {
                       "key": "departureDate",
-                      "value": "2024-06-15"
-                    },
-                    {
-                      "key": "adults",
-                      "value": "2"
-                    },
-                    {
-                      "key": "class",
-                      "value": "economy"
+                      "value": "2025-12-15"
                     }
                   ]
-                }
+                },
+                "description": "Get price trends and analytics for a route"
               }
             },
             {
@@ -1894,7 +1992,7 @@
               }
             },
             {
-              "name": "Reprice Flight",
+              "name": "Reprice Flight Offer",
               "request": {
                 "method": "POST",
                 "header": [
@@ -1905,13 +2003,14 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"flightOfferId\": \"amadeus-offer-123\",\n  \"passengers\": 2\n}"
+                  "raw": "{\n  \"flightOffer\": {\n    \"type\": \"flight-offer\",\n    \"id\": \"1\",\n    \"source\": \"GDS\",\n    \"instantTicketingRequired\": false,\n    \"nonHomogeneous\": false,\n    \"oneWay\": false,\n    \"lastTicketingDate\": \"2025-12-10\",\n    \"numberOfBookableSeats\": 9,\n    \"itineraries\": [],\n    \"price\": {\n      \"currency\": \"USD\",\n      \"total\": \"1200.00\",\n      \"base\": \"1000.00\",\n      \"grandTotal\": \"1200.00\"\n    },\n    \"pricingOptions\": {\n      \"fareType\": [\"PUBLISHED\"],\n      \"includedCheckedBagsOnly\": true\n    },\n    \"validatingAirlineCodes\": [\"EK\"]\n  }\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/flights/reprice",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "flights", "reprice"]
-                }
+                },
+                "description": "Confirm flight pricing before booking (requires authentication)"
               }
             }
           ]
@@ -1920,7 +2019,7 @@
           "name": "Flight Booking",
           "item": [
             {
-              "name": "Create Flight Order",
+              "name": "Book Flight (Create Order)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -1931,25 +2030,90 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"flightOfferId\": \"amadeus-offer-123\",\n  \"travelers\": [\n    {\n      \"id\": \"1\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"name\": {\n        \"firstName\": \"JOHN\",\n        \"lastName\": \"DOE\"\n      },\n      \"gender\": \"MALE\",\n      \"contact\": {\n        \"emailAddress\": \"john@example.com\",\n        \"phones\": [{\n          \"deviceType\": \"MOBILE\",\n          \"countryCallingCode\": \"1\",\n          \"number\": \"1234567890\"\n        }]\n      },\n      \"documents\": [{\n        \"documentType\": \"PASSPORT\",\n        \"birthPlace\": \"New York\",\n        \"issuanceLocation\": \"New York\",\n        \"issuanceDate\": \"2020-01-01\",\n        \"number\": \"AB123456\",\n        \"expiryDate\": \"2030-01-01\",\n        \"issuanceCountry\": \"US\",\n        \"validityCountry\": \"US\",\n        \"nationality\": \"US\",\n        \"holder\": true\n      }]\n    }\n  ]\n}"
+                  "raw": "{\n  \"flightOffer\": {\n    \"type\": \"flight-offer\",\n    \"id\": \"1\",\n    \"source\": \"GDS\",\n    \"instantTicketingRequired\": false,\n    \"itineraries\": [\n      {\n        \"segments\": [\n          {\n            \"departure\": {\n              \"iataCode\": \"JFK\",\n              \"at\": \"2025-12-15T10:00:00\"\n            },\n            \"arrival\": {\n              \"iataCode\": \"DXB\",\n              \"at\": \"2025-12-16T06:00:00\"\n            },\n            \"carrierCode\": \"EK\",\n            \"number\": \"202\",\n            \"duration\": \"PT12H30M\"\n          }\n        ]\n      }\n    ],\n    \"price\": {\n      \"currency\": \"USD\",\n      \"total\": \"1200.00\",\n      \"base\": \"1000.00\",\n      \"grandTotal\": \"1200.00\"\n    },\n    \"pricingOptions\": {\n      \"fareType\": [\"PUBLISHED\"]\n    },\n    \"validatingAirlineCodes\": [\"EK\"]\n  },\n  \"travelers\": [\n    {\n      \"firstName\": \"JOHN\",\n      \"lastName\": \"DOE\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"gender\": \"MALE\",\n      \"email\": \"john@example.com\",\n      \"phoneCountryCode\": \"1\",\n      \"phoneNumber\": \"1234567890\",\n      \"documents\": [\n        {\n          \"documentType\": \"PASSPORT\",\n          \"birthPlace\": \"New York\",\n          \"issuanceLocation\": \"New York\",\n          \"issuanceDate\": \"2020-01-01\",\n          \"number\": \"AB123456\",\n          \"expiryDate\": \"2030-01-01\",\n          \"issuanceCountry\": \"US\",\n          \"validityCountry\": \"US\",\n          \"nationality\": \"US\",\n          \"holder\": true\n        }\n      ]\n    }\n  ],\n  \"contacts\": {\n    \"email\": \"john@example.com\",\n    \"phone\": \"+11234567890\"\n  }\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/flights/order",
+                  "raw": "{{baseUrl}}/api/flights/book",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "flights", "order"]
-                }
+                  "path": ["api", "flights", "book"]
+                },
+                "description": "Book a flight with Amadeus (requires authentication)"
               }
             },
             {
-              "name": "Issue Tickets",
+              "name": "Get Flight Order Details",
               "request": {
-                "method": "POST",
+                "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/flights/orders/FLT-ORD-123/issue",
+                  "raw": "{{baseUrl}}/api/flights/orders/eJzTd9f3NjIJdzUGAAp%2FfD4%3D",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "flights", "orders", "FLT-ORD-123", "issue"]
-                }
+                  "path": ["api", "flights", "orders", "eJzTd9f3NjIJdzUGAAp%2FfD4%3D"]
+                },
+                "description": "Get flight order details by Amadeus order ID"
+              }
+            },
+            {
+              "name": "Cancel Flight Order",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/flights/orders/eJzTd9f3NjIJdzUGAAp%2FfD4%3D",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "flights", "orders", "eJzTd9f3NjIJdzUGAAp%2FfD4%3D"]
+                },
+                "description": "Cancel a flight booking"
+              }
+            },
+            {
+              "name": "Get Seat Maps",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"flightOffer\": {\n    \"type\": \"flight-offer\",\n    \"id\": \"1\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/flights/seat-maps",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "flights", "seat-maps"]
+                },
+                "description": "Get seat map for a flight offer"
+              }
+            },
+            {
+              "name": "Get My Flight Bookings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/flights/my-bookings?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "flights", "my-bookings"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "confirmed",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get authenticated user's flight bookings"
               }
             }
           ]

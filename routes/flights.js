@@ -1,31 +1,32 @@
 const express = require('express');
 const { protect, optionalAuth } = require('../middleware/auth');
+const {
+  searchFlights,
+  getFlightOffer,
+  repriceFlightOffer,
+  createFlightOrder,
+  getFlightOrder,
+  cancelFlightOrder,
+  getSeatMaps,
+  searchLocations,
+  getFlightPriceAnalysis,
+  getUserFlightBookings
+} = require('../controllers/flightController');
 
 const router = express.Router();
 
-// Public routes
-router.get('/search', optionalAuth, (req, res) => {
-  res.json({
-    success: true,
-    message: 'Search flights - to be implemented'
-  });
-});
-
-router.get('/:id', optionalAuth, (req, res) => {
-  res.json({
-    success: true,
-    message: 'Get flight by ID - to be implemented'
-  });
-});
+// Public routes (optional auth for personalization)
+router.get('/search', optionalAuth, searchFlights);
+router.get('/locations/search', searchLocations);
+router.get('/price-analysis', getFlightPriceAnalysis);
+router.get('/offers/:offerId', optionalAuth, getFlightOffer);
 
 // Protected routes
-router.use(protect);
-
-router.post('/book', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Book flight - to be implemented'
-  });
-});
+router.post('/reprice', protect, repriceFlightOffer);
+router.post('/book', protect, createFlightOrder);
+router.post('/seat-maps', protect, getSeatMaps);
+router.get('/orders/:orderId', protect, getFlightOrder);
+router.delete('/orders/:orderId', protect, cancelFlightOrder);
+router.get('/my-bookings', protect, getUserFlightBookings);
 
 module.exports = router;
