@@ -100,30 +100,44 @@ class AmadeusFlightProvider extends IFlightProvider {
         data: {
           type: 'flight-order',
           flightOffers: [flightOffer],
-          travelers: travelers.map((traveler, index) => ({
-            id: `${index + 1}`,
-            dateOfBirth: traveler.dateOfBirth,
-            name: {
-              firstName: traveler.firstName,
-              lastName: traveler.lastName
-            },
-            gender: traveler.gender,
-            contact: {
-              emailAddress: traveler.email || contacts.email,
-              phones: [{
-                deviceType: 'MOBILE',
-                countryCallingCode: traveler.phoneCountryCode || '1',
-                number: traveler.phoneNumber || contacts.phone
-              }]
-            },
-            documents: traveler.documents || []
-          }))
+          travelers: travelers.map((traveler, index) => {
+            // Format phone number properly (remove any + or spaces)
+            const cleanPhone = (traveler.phoneNumber || '').replace(/[\s\-\+]/g, '');
+            
+            return {
+              id: `${index + 1}`,
+              dateOfBirth: traveler.dateOfBirth,
+              name: {
+                firstName: traveler.firstName.toUpperCase(),
+                lastName: traveler.lastName.toUpperCase()
+              },
+              gender: traveler.gender.toUpperCase(),
+              contact: {
+                emailAddress: traveler.email || contacts.email,
+                phones: [{
+                  deviceType: 'MOBILE',
+                  countryCallingCode: (traveler.phoneCountryCode || '1').replace(/\+/g, ''),
+                  number: cleanPhone
+                }]
+              },
+              documents: (traveler.documents || []).map(doc => ({
+                documentType: doc.documentType,
+                number: doc.number,
+                expiryDate: doc.expiryDate,
+                issuanceCountry: doc.issuanceCountry,
+                nationality: doc.nationality,
+                holder: doc.holder !== undefined ? doc.holder : true
+              }))
+            };
+          })
         }
       };
 
       if (remarks) {
         orderRequest.data.remarks = remarks;
       }
+
+      console.log('Creating Amadeus order with:', JSON.stringify(orderRequest, null, 2));
 
       const response = await amadeus.booking.flightOrders.post(
         JSON.stringify(orderRequest)
@@ -132,6 +146,7 @@ class AmadeusFlightProvider extends IFlightProvider {
       return this.transformFlightOrder(response.data);
     } catch (error) {
       console.error('Amadeus create order error:', error);
+      console.error('Error details:', error.response?.result || error);
       throw this.handleAmadeusError(error);
     }
   }

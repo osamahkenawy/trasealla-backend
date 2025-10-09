@@ -76,7 +76,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@trasealla.com\",\n  \"password\": \"Admin123456!\"\n}"
+              "raw": "{\n  \"email\": \"osama.admin@yopmail.com\",\n  \"password\": \"Osama123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/login",
@@ -212,7 +212,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}},\n  \"travelers\": [\n    {\n      \"firstName\": \"JOHN\",\n      \"lastName\": \"DOE\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"gender\": \"MALE\",\n      \"email\": \"john@example.com\",\n      \"phoneCountryCode\": \"1\",\n      \"phoneNumber\": \"1234567890\",\n      \"documents\": [\n        {\n          \"documentType\": \"PASSPORT\",\n          \"number\": \"AB123456\",\n          \"expiryDate\": \"2030-01-01\",\n          \"issuanceCountry\": \"US\",\n          \"nationality\": \"US\",\n          \"holder\": true\n        }\n      ]\n    }\n  ],\n  \"contacts\": {\n    \"email\": \"john@example.com\",\n    \"phone\": \"+11234567890\"\n  }\n}"
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}},\n  \"travelers\": [\n    {\n      \"id\": \"1\",\n      \"firstName\": \"JOHN\",\n      \"lastName\": \"DOE\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"gender\": \"MALE\",\n      \"email\": \"john@example.com\",\n      \"phoneCountryCode\": \"1\",\n      \"phoneNumber\": \"1234567890\",\n      \"documents\": [\n        {\n          \"documentType\": \"PASSPORT\",\n          \"number\": \"AB123456\",\n          \"expiryDate\": \"2030-01-01\",\n          \"issuanceCountry\": \"US\",\n          \"nationality\": \"US\",\n          \"holder\": true\n        }\n      ]\n    }\n  ],\n  \"contacts\": {\n    \"email\": \"john@example.com\",\n    \"phone\": \"1234567890\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/flights/create-order",
@@ -766,6 +766,106 @@
               "raw": "{{baseUrl}}/api/payments/refund",
               "host": ["{{baseUrl}}"],
               "path": ["api", "payments", "refund"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 PayTabs (UAE Payment Gateway)",
+      "description": "Integrated PayTabs payment for UAE market",
+      "item": [
+        {
+          "name": "⭐ Pay-Then-Book (Safest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('paymentUrl', jsonData.data.payment.paymentUrl);",
+                  "    pm.environment.set('paymentId', jsonData.data.payment.id);",
+                  "    console.log('✅ Payment URL:', jsonData.data.payment.paymentUrl);",
+                  "    console.log('📌 Customer must pay BEFORE flight is booked');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}},\n  \"travelers\": [\n    {\n      \"id\": \"1\",\n      \"firstName\": \"OSAMA\",\n      \"lastName\": \"ALAAELDIN\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"gender\": \"MALE\",\n      \"email\": \"osama@example.com\",\n      \"phoneCountryCode\": \"971\",\n      \"phoneNumber\": \"501234567\",\n      \"documents\": [\n        {\n          \"documentType\": \"PASSPORT\",\n          \"number\": \"AB123456\",\n          \"expiryDate\": \"2030-01-01\",\n          \"issuanceCountry\": \"US\",\n          \"nationality\": \"US\",\n          \"holder\": true\n        }\n      ]\n    }\n  ],\n  \"contacts\": {\n    \"email\": \"osama@example.com\",\n    \"phone\": \"971501234567\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/paytabs/pay-then-book",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "paytabs", "pay-then-book"]
+            },
+            "description": "Safest flow: Customer pays FIRST, then flight is booked. Zero risk!"
+          }
+        },
+        {
+          "name": "Book-And-Pay (Faster)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('paymentUrl', jsonData.data.payment.paymentUrl);",
+                  "    pm.environment.set('pnr', jsonData.data.flightOrder.pnr);",
+                  "    pm.environment.set('bookingNumber', jsonData.data.booking.bookingNumber);",
+                  "    console.log('✅ PNR:', jsonData.data.flightOrder.pnr);",
+                  "    console.log('💳 Payment URL:', jsonData.data.payment.paymentUrl);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}},\n  \"travelers\": [\n    {\n      \"id\": \"1\",\n      \"firstName\": \"OSAMA\",\n      \"lastName\": \"ALAAELDIN\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"gender\": \"MALE\",\n      \"email\": \"osama@example.com\",\n      \"phoneCountryCode\": \"971\",\n      \"phoneNumber\": \"501234567\",\n      \"documents\": [\n        {\n          \"documentType\": \"PASSPORT\",\n          \"number\": \"AB123456\",\n          \"expiryDate\": \"2030-01-01\",\n          \"issuanceCountry\": \"US\",\n          \"nationality\": \"US\",\n          \"holder\": true\n        }\n      ]\n    }\n  ],\n  \"contacts\": {\n    \"email\": \"osama@example.com\",\n    \"phone\": \"971501234567\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/paytabs/book-and-pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "paytabs", "book-and-pay"]
+            },
+            "description": "Book flight immediately, then collect payment. Faster but slightly risky."
+          }
+        },
+        {
+          "name": "Create Payment for Booking",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingNumber\": \"{{bookingNumber}}\",\n  \"returnUrl\": \"https://yoursite.com/payment/success\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/paytabs/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "paytabs", "create"]
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/paytabs/verify/TST2024001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "paytabs", "verify", "TST2024001"]
             }
           }
         }

@@ -1,9 +1,12 @@
-const AmadeusFlightProvider = require('../services/providers/AmadeusFlightProvider');
+const FlightProviderFactory = require('../services/FlightProviderFactory');
 const { FlightOrder, Booking, User, AuditLog, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
-// Initialize provider
-const flightProvider = new AmadeusFlightProvider();
+// Get flight provider (Amadeus or Duffel based on config)
+const getFlightProvider = (req) => {
+  const providerName = req.query.provider || req.body.provider || process.env.DEFAULT_FLIGHT_PROVIDER || 'duffel';
+  return FlightProviderFactory.getProvider(providerName);
+};
 
 /**
  * STEP 1: Search Flights (Shopping)
@@ -34,6 +37,10 @@ exports.searchFlights = async (req, res) => {
       });
     }
 
+    // Get flight provider
+    const flightProvider = getFlightProvider(req);
+    console.log(`Using provider: ${flightProvider.providerName}`);
+
     const flightOffers = await flightProvider.searchFlights({
       originLocationCode: origin.toUpperCase(),
       destinationLocationCode: destination.toUpperCase(),
@@ -48,7 +55,7 @@ exports.searchFlights = async (req, res) => {
       maxResults: parseInt(maxResults)
     });
 
-    // Log search
+    // Log search with provider info
     if (req.user) {
       await AuditLog.create({
         userId: req.user.id,
@@ -96,21 +103,31 @@ exports.confirmFlightPrice = async (req, res) => {
       });
     }
 
-    // Accept both transformed format (with .raw) or direct Amadeus format
+    // Accept both transformed format (with .raw) or direct format
     // If the offer has a 'raw' field (our transformed format), use that
+    const originalOffer = flightOffer;
     if (flightOffer.raw) {
       flightOffer = flightOffer.raw;
     }
 
-    // Validate it's an Amadeus offer
-    if (!flightOffer.type || flightOffer.type !== 'flight-offer') {
+    // Validate it's a valid offer (Amadeus or Duffel)
+    const isAmadeusOffer = flightOffer.type === 'flight-offer' && flightOffer.source === 'GDS';
+    const isDuffelOffer = flightOffer.id && flightOffer.id.startsWith('off_');
+    
+    if (!isAmadeusOffer && !isDuffelOffer) {
       return res.status(400).json({
         success: false,
         message: 'Invalid flight offer format',
-        hint: 'Make sure you are sending the complete flight offer object from search results'
+        hint: 'Send the complete offer object from search results (Amadeus or Duffel)'
       });
     }
 
+    // Determine provider from offer
+    const providerName = isDuffelOffer ? 'duffel' : 'amadeus';
+    const flightProvider = FlightProviderFactory.getProvider(providerName);
+    
+    console.log(`Confirming price with ${flightProvider.providerName}`);
+    
     // Reprice/validate the offer
     const confirmedOffer = await flightProvider.repriceFlightOffer(flightOffer);
 
@@ -144,17 +161,20 @@ exports.createFlightOrder = async (req, res) => {
       });
     }
 
-    // Accept both transformed format (with .raw) or direct Amadeus format
+    // Accept both transformed format or direct format
     if (flightOffer.raw) {
       flightOffer = flightOffer.raw;
     }
 
-    // Validate it's an Amadeus offer
-    if (!flightOffer.type || flightOffer.type !== 'flight-offer') {
+    // Validate it's a valid offer (Amadeus or Duffel)
+    const isAmadeusOffer = flightOffer.type === 'flight-offer' && flightOffer.source === 'GDS';
+    const isDuffelOffer = flightOffer.id && flightOffer.id.startsWith('off_');
+    
+    if (!isAmadeusOffer && !isDuffelOffer) {
       return res.status(400).json({
         success: false,
         message: 'Invalid flight offer format',
-        hint: 'Send the raw Amadeus offer or confirmed offer from confirm-price endpoint'
+        hint: 'Send the complete offer object from search results or confirm-price endpoint'
       });
     }
 
@@ -168,7 +188,12 @@ exports.createFlightOrder = async (req, res) => {
       });
     }
 
-    // Create order with Amadeus
+    // Determine provider and create order
+    const providerName = isDuffelOffer ? 'duffel' : 'amadeus';
+    const flightProvider = FlightProviderFactory.getProvider(providerName);
+    
+    console.log(`Creating order with ${flightProvider.providerName}`);
+    
     const amadeusOrder = await flightProvider.createFlightOrder({
       flightOffer,
       travelers,
@@ -176,13 +201,27 @@ exports.createFlightOrder = async (req, res) => {
       remarks
     });
 
-    // Calculate pricing
-    const totalAmount = parseFloat(flightOffer.price.grandTotal);
-    const baseAmount = parseFloat(flightOffer.price.base);
+    // Calculate pricing (handle both Amadeus and Duffel formats)
+    const totalAmount = flightOffer.price?.grandTotal 
+      ? parseFloat(flightOffer.price.grandTotal)
+      : parseFloat(flightOffer.total_amount || 0);
+    
+    const baseAmount = flightOffer.price?.base
+      ? parseFloat(flightOffer.price.base)
+      : parseFloat(flightOffer.base_amount || totalAmount * 0.85);
+    
     const taxAmount = totalAmount - baseAmount;
 
     // Extract contact name from first traveler
     const contactName = contacts.name || `${travelers[0].firstName} ${travelers[0].lastName}`;
+    
+    // Get travel date (handle both formats)
+    const travelDate = flightOffer.itineraries?.[0]?.segments?.[0]?.departure?.at
+      || flightOffer.slices?.[0]?.segments?.[0]?.departing_at
+      || new Date();
+    
+    // Get currency (handle both formats)
+    const currency = flightOffer.price?.currency || flightOffer.total_currency || 'USD';
     
     // Create booking record
     const booking = await Booking.create({
@@ -191,10 +230,10 @@ exports.createFlightOrder = async (req, res) => {
       referenceId: 0, // For flights, we use FlightOrder ID, set to 0 initially
       bookingNumber: `BKG-FLT-${Date.now()}`,
       bookingStatus: 'confirmed',
-      travelDate: flightOffer.itineraries[0].segments[0].departure.at,
+      travelDate,
       numberOfPeople: travelers.length,
       totalAmount,
-      currency: flightOffer.price.currency,
+      currency,
       contactName,
       contactEmail: contacts.email,
       contactPhone: contacts.phone,
@@ -209,21 +248,21 @@ exports.createFlightOrder = async (req, res) => {
       userId: req.user.id,
       bookingId: booking.id,
       amadeusOrderId: amadeusOrder.id,
-      pnr: amadeusOrder.associatedRecords?.[0]?.reference || `TMP${Date.now()}`,
-      gdsRecordLocator: amadeusOrder.associatedRecords?.[0]?.reference,
+      pnr: amadeusOrder.bookingReference || amadeusOrder.associatedRecords?.[0]?.reference || `TMP${Date.now()}`,
+      gdsRecordLocator: amadeusOrder.bookingReference || amadeusOrder.associatedRecords?.[0]?.reference,
       status: 'confirmed',
       ticketingStatus: 'not_issued',
       flightOfferData: flightOffer,
-      itineraries: flightOffer.itineraries,
+      itineraries: flightOffer.itineraries || flightOffer.slices || [],
       totalAmount,
       baseAmount,
       taxAmount,
-      currency: flightOffer.price.currency,
+      currency,
       travelers,
       numberOfTravelers: travelers.length,
       contactEmail: contacts.email,
       contactPhone: contacts.phone,
-      validatingAirline: flightOffer.validatingAirlineCodes?.[0],
+      validatingAirline: flightOffer.validatingAirlineCodes?.[0] || flightOffer.owner?.iata_code,
       operatingAirlines: extractOperatingAirlines(flightOffer),
       ancillaryServices: ancillaryServices || {},
       bookingChannel: req.user.role === 'agent' ? 'agent' : 'web',
@@ -399,6 +438,7 @@ exports.getSeatMaps = async (req, res) => {
       });
     }
 
+    const flightProvider = getFlightProvider(req);
     const seatMaps = await flightProvider.getSeatMaps(flightOffer);
 
     res.json({
@@ -455,7 +495,8 @@ exports.cancelFlightOrder = async (req, res) => {
       });
     }
 
-    // Cancel with Amadeus
+    // Get provider and cancel order
+    const flightProvider = getFlightProvider(req);
     const cancellation = await flightProvider.cancelFlightOrder(flightOrder.amadeusOrderId);
 
     // Update order status
@@ -721,6 +762,7 @@ exports.searchLocations = async (req, res) => {
       });
     }
 
+    const flightProvider = getFlightProvider(req);
     const locations = await flightProvider.searchLocations(keyword);
 
     res.json({
@@ -752,6 +794,7 @@ exports.getFlightPriceAnalysis = async (req, res) => {
       });
     }
 
+    const flightProvider = getFlightProvider(req);
     const priceAnalysis = await flightProvider.getFlightPriceAnalysis(
       origin.toUpperCase(),
       destination.toUpperCase(),
@@ -796,10 +839,19 @@ function validateTravelers(travelers) {
 function extractOperatingAirlines(flightOffer) {
   const airlines = new Set();
   
+  // Handle Amadeus format (itineraries)
   flightOffer.itineraries?.forEach(itinerary => {
     itinerary.segments?.forEach(segment => {
       if (segment.carrierCode) airlines.add(segment.carrierCode);
       if (segment.operating?.carrierCode) airlines.add(segment.operating.carrierCode);
+    });
+  });
+  
+  // Handle Duffel format (slices)
+  flightOffer.slices?.forEach(slice => {
+    slice.segments?.forEach(segment => {
+      if (segment.marketing_carrier?.iata_code) airlines.add(segment.marketing_carrier.iata_code);
+      if (segment.operating_carrier?.iata_code) airlines.add(segment.operating_carrier.iata_code);
     });
   });
 

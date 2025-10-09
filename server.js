@@ -31,10 +31,17 @@ const roleRoutes = require('./routes/roles');
 const cmsRoutes = require('./routes/cms');
 const auditRoutes = require('./routes/audit');
 
+// Payment gateway routes
+const payTabsRoutes = require('./routes/paytabs');
+
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { connectDB } = require('./config/database');
 const { detectLanguage } = require('./middleware/i18n');
+
+// Swagger documentation
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 // CORS configuration - MUST be before helmet and other middleware
 const corsOptions = {
@@ -98,12 +105,26 @@ app.use(detectLanguage);
 // Static files
 app.use('/uploads', express.static('uploads'));
 
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Trasealla API Documentation',
+  customfavIcon: '/favicon.ico'
+}));
+
+// Swagger JSON
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'Trasealla API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    docs: 'http://localhost:5001/api-docs'
   });
 });
 
@@ -128,6 +149,9 @@ app.use('/api/agency', agencyRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/cms', cmsRoutes);
 app.use('/api/audit', auditRoutes);
+
+// Payment gateway routes
+app.use('/api/payments/paytabs', payTabsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
