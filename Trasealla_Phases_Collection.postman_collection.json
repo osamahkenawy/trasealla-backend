@@ -592,14 +592,80 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isActive\": false\n}"
+              "raw": "{\n  \"status\": \"active\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/3/status",
               "host": ["{{baseUrl}}"],
               "path": ["api", "users", "3", "status"]
             },
-            "description": "Activate or deactivate a user account (admin only)"
+            "description": "Update user status: active, inactive, or suspended (admin only)"
+          }
+        },
+        {
+          "name": "Activate User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "3", "status"]
+            },
+            "description": "Set user status to active"
+          }
+        },
+        {
+          "name": "Deactivate User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"inactive\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "3", "status"]
+            },
+            "description": "Set user status to inactive"
+          }
+        },
+        {
+          "name": "Suspend User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"suspended\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "3", "status"]
+            },
+            "description": "Set user status to suspended"
           }
         },
         {
@@ -696,16 +762,49 @@
           }
         },
         {
+          "name": "Get All User Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/stats/all?startDate=2024-01-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "stats", "all"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01",
+                  "description": "Filter from date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "Filter to date (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "branchId",
+                  "value": "1",
+                  "description": "Filter by branch (optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get comprehensive user statistics including growth, demographics, activity, and more (admin only)"
+          }
+        },
+        {
           "name": "Get Dashboard Statistics (Admin)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/users/dashboard-stats",
+              "raw": "{{baseUrl}}/api/users/stats/dashboard",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "dashboard-stats"]
+              "path": ["api", "users", "stats", "dashboard"]
             },
-            "description": "Get user statistics dashboard data (admin only)"
+            "description": "Get simplified dashboard statistics (admin only)"
           }
         }
       ]

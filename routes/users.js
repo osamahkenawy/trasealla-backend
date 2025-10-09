@@ -9,7 +9,8 @@ const {
   getUserStats,
   getUserActivity,
   assignToBranch,
-  getDashboardStats
+  getDashboardStats,
+  getAllUserStats
 } = require('../controllers/userController');
 
 const router = express.Router();
@@ -17,9 +18,12 @@ const router = express.Router();
 // All routes are protected and require admin access
 router.use(protect, authorize('admin'));
 
+// Stats routes (must come before /:id routes)
+router.get('/stats/all', getAllUserStats);
+router.get('/stats/dashboard', getDashboardStats);
+
 // User management routes
 router.get('/', getAllUsers);
-router.get('/dashboard-stats', getDashboardStats);
 router.get('/:id', getUserById);
 router.get('/:id/stats', getUserStats);
 router.get('/:id/activity', getUserActivity);

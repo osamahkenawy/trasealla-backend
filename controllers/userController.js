@@ -133,7 +133,32 @@ exports.getUserById = async (req, res) => {
  */
 exports.updateUserStatus = async (req, res) => {
   try {
-    const { isActive } = req.body;
+    const { status, isActive } = req.body;
+
+    // Support both new status field and legacy isActive for backward compatibility
+    let newStatus;
+    
+    if (status) {
+      // Validate status values
+      const validStatuses = ['active', 'inactive', 'suspended'];
+      if (!validStatuses.includes(status.toLowerCase())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status value',
+          hint: 'Use "active", "inactive", or "suspended"'
+        });
+      }
+      newStatus = status.toLowerCase();
+    } else if (isActive !== undefined) {
+      // Legacy support: convert boolean to status
+      newStatus = isActive ? 'active' : 'inactive';
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'status field is required',
+        hint: 'Use {"status": "active"}, {"status": "inactive"}, or {"status": "suspended"}'
+      });
+    }
 
     const user = await User.findByPk(req.params.id);
 
@@ -144,16 +169,25 @@ exports.updateUserStatus = async (req, res) => {
       });
     }
 
-    // Prevent admin from deactivating themselves
-    if (req.user.id === user.id && isActive === false) {
+    // Prevent admin from deactivating or suspending themselves
+    if (req.user.id === user.id && newStatus !== 'active') {
       return res.status(400).json({
         success: false,
-        message: 'You cannot deactivate your own account'
+        message: 'You cannot deactivate or suspend your own account'
       });
     }
 
-    const oldStatus = user.isActive;
-    await user.update({ isActive });
+    const oldStatus = user.status;
+    const oldIsActive = user.isActive;
+    
+    // Update both status field and isActive for backward compatibility
+    await user.update({ 
+      status: newStatus,
+      isActive: newStatus === 'active'
+    });
+    
+    // Reload user to get fresh data from database
+    await user.reload();
 
     // Log status change
     await AuditLog.create({
@@ -162,20 +196,28 @@ exports.updateUserStatus = async (req, res) => {
       entity: 'user_status',
       entityId: user.id,
       changes: {
-        old: { isActive: oldStatus },
-        new: { isActive }
+        old: { status: oldStatus, isActive: oldIsActive },
+        new: { status: user.status, isActive: user.isActive }
       },
       metadata: { ip: req.ip, userAgent: req.headers['user-agent'] }
     });
 
+    // Return full user object with updated status
+    const updatedUser = await User.findByPk(user.id, {
+      attributes: { exclude: ['password', 'passwordResetToken', 'emailVerificationToken'] }
+    });
+
+    // Get status message
+    const statusMessages = {
+      active: 'activated',
+      inactive: 'deactivated',
+      suspended: 'suspended'
+    };
+
     res.json({
       success: true,
-      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-      data: {
-        id: user.id,
-        email: user.email,
-        isActive: user.isActive
-      }
+      message: `User ${statusMessages[user.status]} successfully`,
+      data: updatedUser
     });
   } catch (error) {
     console.error('Update user status error:', error);
@@ -401,6 +443,233 @@ exports.assignToBranch = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error assigning user to branch'
+    });
+  }
+};
+
+/**
+ * Get comprehensive user statistics (Admin only)
+ */
+exports.getAllUserStats = async (req, res) => {
+  try {
+    const { startDate, endDate, branchId } = req.query;
+
+    // Build date filter
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) dateFilter.createdAt[Op.gte] = new Date(startDate);
+      if (endDate) dateFilter.createdAt[Op.lte] = new Date(endDate);
+    }
+
+    // Branch filter
+    const branchFilter = branchId ? { branchId } : {};
+
+    // 1. Total counts
+    const totalUsers = await User.count();
+    const activeUsers = await User.count({ where: { isActive: true } });
+    const inactiveUsers = await User.count({ where: { isActive: false } });
+    const verifiedEmails = await User.count({ where: { isEmailVerified: true } });
+
+    // 2. Users by role
+    const usersByRole = await User.findAll({
+      attributes: [
+        'role',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['role']
+    });
+
+    // 3. Users by status
+    const usersByStatus = await User.findAll({
+      attributes: [
+        'isActive',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['isActive']
+    });
+
+    // 4. Recent registrations by period
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisYear = new Date(now.getFullYear(), 0, 1);
+
+    const registrationsToday = await User.count({
+      where: { createdAt: { [Op.gte]: today } }
+    });
+
+    const registrationsThisWeek = await User.count({
+      where: { createdAt: { [Op.gte]: thisWeek } }
+    });
+
+    const registrationsThisMonth = await User.count({
+      where: { createdAt: { [Op.gte]: thisMonth } }
+    });
+
+    const registrationsThisYear = await User.count({
+      where: { createdAt: { [Op.gte]: thisYear } }
+    });
+
+    // 5. Users by branch
+    const usersByBranch = await User.findAll({
+      attributes: [
+        'branchId',
+        [sequelize.fn('COUNT', sequelize.col('User.id')), 'count']
+      ],
+      include: [{
+        model: Branch,
+        as: 'branch',
+        attributes: ['id', 'name', 'code', 'city', 'country']
+      }],
+      group: ['branchId', 'branch.id'],
+      where: {
+        branchId: { [Op.not]: null }
+      }
+    });
+
+    // 6. Users by nationality
+    const usersByNationality = await User.findAll({
+      attributes: [
+        'nationality',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        nationality: { [Op.not]: null }
+      },
+      group: ['nationality'],
+      order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+      limit: 10
+    });
+
+    // 7. Users by country
+    const usersByCountry = await User.findAll({
+      attributes: [
+        'country',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        country: { [Op.not]: null }
+      },
+      group: ['country'],
+      order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+      limit: 10
+    });
+
+    // 8. User growth by month (last 12 months)
+    const userGrowth = await sequelize.query(`
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') as month,
+        COUNT(*) as count,
+        role
+      FROM users
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+      GROUP BY month, role
+      ORDER BY month DESC
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    // 9. Top active users (by booking count)
+    const topUsers = await User.findAll({
+      attributes: [
+        'id',
+        'firstName',
+        'lastName',
+        'email',
+        'role'
+      ],
+      include: [{
+        model: Booking,
+        as: 'bookings',
+        attributes: []
+      }],
+      group: ['User.id'],
+      order: [[sequelize.fn('COUNT', sequelize.col('bookings.id')), 'DESC']],
+      limit: 10,
+      subQuery: false
+    });
+
+    // 10. Gender distribution
+    const usersByGender = await User.findAll({
+      attributes: [
+        'gender',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        gender: { [Op.not]: null }
+      },
+      group: ['gender']
+    });
+
+    // 11. Email verification stats
+    const emailVerificationStats = {
+      verified: await User.count({ where: { isEmailVerified: true } }),
+      unverified: await User.count({ where: { isEmailVerified: false } }),
+      verificationRate: 0
+    };
+    
+    if (totalUsers > 0) {
+      emailVerificationStats.verificationRate = 
+        ((emailVerificationStats.verified / totalUsers) * 100).toFixed(2);
+    }
+
+    // 12. Recent logins
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const activeInLast7Days = await User.count({
+      where: {
+        lastLoginAt: { [Op.gte]: sevenDaysAgo }
+      }
+    });
+
+    // 13. Users without bookings
+    const usersWithoutBookings = await User.count({
+      include: [{
+        model: Booking,
+        as: 'bookings',
+        required: false
+      }],
+      where: {
+        '$bookings.id$': null
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          totalUsers,
+          activeUsers,
+          inactiveUsers,
+          verifiedEmails,
+          activeInLast7Days,
+          usersWithoutBookings
+        },
+        registrations: {
+          today: registrationsToday,
+          thisWeek: registrationsThisWeek,
+          thisMonth: registrationsThisMonth,
+          thisYear: registrationsThisYear
+        },
+        distribution: {
+          byRole: usersByRole,
+          byStatus: usersByStatus,
+          byBranch: usersByBranch,
+          byNationality: usersByNationality,
+          byCountry: usersByCountry,
+          byGender: usersByGender
+        },
+        growth: {
+          byMonth: userGrowth
+        },
+        emailVerification: emailVerificationStats,
+        topActiveUsers: topUsers
+      }
+    });
+  } catch (error) {
+    console.error('Get all user stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user statistics'
     });
   }
 };

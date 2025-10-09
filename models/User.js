@@ -90,6 +90,11 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  status: {
+    type: DataTypes.ENUM('active', 'inactive', 'suspended'),
+    defaultValue: 'active',
+    allowNull: false
+  },
   profileImage: {
     type: DataTypes.STRING(255),
     allowNull: true

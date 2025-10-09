@@ -9,6 +9,8 @@
     "test": "jest",
     "init": "node scripts/initializeSystem.js",
     "create:admin": "node scripts/createFirstAdmin.js",
+    "create:test-admin": "node scripts/createTestAdmin.js",
+    "migrate:user-status": "node scripts/addUserStatusColumn.js",
     "sitemap": "node scripts/generateSitemap.js",
     "seed": "node scripts/seedData.js",
     "drop:phase1": "node scripts/dropPhaseTables.js",
