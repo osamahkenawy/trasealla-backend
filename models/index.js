@@ -31,6 +31,9 @@ const LeadActivity = require('./LeadActivity');
 
 // Phase 7 - Flight Orders
 const FlightOrder = require('./FlightOrder');
+const Traveler = require('./Traveler');
+const TravelerDocument = require('./TravelerDocument');
+const FlightSegment = require('./FlightSegment');
 
 // Define associations
 
@@ -112,6 +115,18 @@ FlightOrder.belongsTo(User, { foreignKey: 'agentId', as: 'agent' });
 FlightOrder.belongsTo(Booking, { foreignKey: 'bookingId', as: 'booking' });
 Booking.hasMany(FlightOrder, { foreignKey: 'bookingId', as: 'flightOrders' });
 
+// Traveler associations
+Traveler.belongsTo(Booking, { foreignKey: 'bookingId', as: 'booking' });
+Booking.hasMany(Traveler, { foreignKey: 'bookingId', as: 'travelerList' }); // Changed to avoid collision with 'travelers' JSON field
+Traveler.hasMany(TravelerDocument, { foreignKey: 'travelerId', as: 'documents' });
+
+// Traveler Document associations
+TravelerDocument.belongsTo(Traveler, { foreignKey: 'travelerId', as: 'traveler' });
+
+// Flight Segment associations
+FlightSegment.belongsTo(FlightOrder, { foreignKey: 'flightOrderId', as: 'flightOrder' });
+FlightOrder.hasMany(FlightSegment, { foreignKey: 'flightOrderId', as: 'segments' });
+
 // Export models and sequelize instance
 module.exports = {
   sequelize,
@@ -141,5 +156,8 @@ module.exports = {
   Lead,
   LeadActivity,
   // Phase 7 Models
-  FlightOrder
+  FlightOrder,
+  Traveler,
+  TravelerDocument,
+  FlightSegment
 };
