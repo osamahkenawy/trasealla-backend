@@ -61,10 +61,23 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
                   "    const response = pm.response.json();",
+                  "    ",
+                  "    // Save to both collection and environment variables",
                   "    pm.collectionVariables.set('authToken', response.data.token);",
-                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken || '');",
+                  "    pm.collectionVariables.set('userId', response.data.user.id);",
+                  "    ",
+                  "    // Also save to environment if one is active",
+                  "    if (pm.environment.name) {",
+                  "        pm.environment.set('authToken', response.data.token);",
+                  "        pm.environment.set('refreshToken', response.data.refreshToken || '');",
+                  "        pm.environment.set('userId', response.data.user.id);",
+                  "    }",
+                  "    ",
+                  "    console.log('✅ Registration Successful!');",
+                  "    console.log('🎫 Token saved and ready to use!');",
                   "}"
                 ]
               }
@@ -98,8 +111,23 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
+                  "    ",
+                  "    // Save to both collection and environment variables",
                   "    pm.collectionVariables.set('authToken', response.data.token);",
-                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken || '');",
+                  "    pm.collectionVariables.set('userId', response.data.user.id);",
+                  "    ",
+                  "    // Also save to environment if one is active",
+                  "    if (pm.environment.name) {",
+                  "        pm.environment.set('authToken', response.data.token);",
+                  "        pm.environment.set('refreshToken', response.data.refreshToken || '');",
+                  "        pm.environment.set('userId', response.data.user.id);",
+                  "    }",
+                  "    ",
+                  "    console.log('✅ Login Successful!');",
+                  "    console.log('👤 User:', response.data.user.firstName + ' ' + response.data.user.lastName);",
+                  "    console.log('🔑 Role:', response.data.user.role);",
+                  "    console.log('🎫 Token saved and ready to use!');",
                   "}"
                 ]
               }
@@ -1330,6 +1358,203 @@
               "host": ["{{baseUrl}}"],
               "path": ["content", "blog", "1"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Airports",
+      "item": [
+        {
+          "name": "Get All Airports",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/airports?limit=100&active=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "Maximum number of airports to return"
+                },
+                {
+                  "key": "active",
+                  "value": "true",
+                  "description": "Filter by active status"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search term for airport code, title, city, or country",
+                  "disabled": true
+                },
+                {
+                  "key": "country",
+                  "value": "",
+                  "description": "Filter by country",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all airports with automatic grouping by country"
+          }
+        },
+        {
+          "name": "Search Airports (Autocomplete)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/airports/search?q=dubai&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "dubai",
+                  "description": "Search query (minimum 2 characters)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum number of results"
+                }
+              ]
+            },
+            "description": "Search airports with autocomplete functionality"
+          }
+        },
+        {
+          "name": "Get Airport by Code",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/airports/DXB",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "DXB"]
+            },
+            "description": "Get a single airport by its IATA code"
+          }
+        },
+        {
+          "name": "Get Airports by Country",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/airports/country/India",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "country", "India"]
+            },
+            "description": "Get all airports in a specific country"
+          }
+        },
+        {
+          "name": "Create Airport (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"JFK\",\n  \"title\": \"John F. Kennedy International Airport\",\n  \"city\": \"New York\",\n  \"country\": \"United States\",\n  \"country_code\": \"US\",\n  \"timezone\": \"America/New_York\",\n  \"latitude\": 40.6413,\n  \"longitude\": -73.7781\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/airports",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports"]
+            },
+            "description": "Create a new airport (Admin only)"
+          }
+        },
+        {
+          "name": "Bulk Create Airports (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"airports\": [\n    {\n      \"code\": \"LAX\",\n      \"title\": \"Los Angeles International Airport\",\n      \"city\": \"Los Angeles\",\n      \"country\": \"United States\",\n      \"country_code\": \"US\",\n      \"timezone\": \"America/Los_Angeles\",\n      \"latitude\": 33.9416,\n      \"longitude\": -118.4085\n    },\n    {\n      \"code\": \"ORD\",\n      \"title\": \"O'Hare International Airport\",\n      \"city\": \"Chicago\",\n      \"country\": \"United States\",\n      \"country_code\": \"US\",\n      \"timezone\": \"America/Chicago\",\n      \"latitude\": 41.9742,\n      \"longitude\": -87.9073\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/airports/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "bulk"]
+            },
+            "description": "Bulk create multiple airports (Admin only)"
+          }
+        },
+        {
+          "name": "Update Airport (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dubai International Airport - Updated\",\n  \"city\": \"Dubai\",\n  \"timezone\": \"Asia/Dubai\",\n  \"latitude\": 25.2532,\n  \"longitude\": 55.3657\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/airports/DXB",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "DXB"]
+            },
+            "description": "Update an existing airport (Admin only)"
+          }
+        },
+        {
+          "name": "Toggle Airport Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/airports/DXB/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "DXB", "toggle"]
+            },
+            "description": "Toggle airport active status (Admin only)"
+          }
+        },
+        {
+          "name": "Delete Airport (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/airports/JFK",
+              "host": ["{{baseUrl}}"],
+              "path": ["airports", "JFK"]
+            },
+            "description": "Delete an airport (Admin only)"
           }
         }
       ]

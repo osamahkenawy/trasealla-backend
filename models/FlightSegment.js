@@ -91,7 +91,7 @@ const FlightSegment = sequelize.define('FlightSegment', {
     defaultValue: 'economy'
   },
   bookingClass: {
-    type: DataTypes.STRING(2) // Y, J, F, etc.
+    type: DataTypes.STRING(20) // Y, J, F, economy, etc.
   },
   fareBasis: {
     type: DataTypes.STRING(20)

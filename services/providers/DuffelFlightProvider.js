@@ -129,6 +129,12 @@ class DuffelFlightProvider extends IFlightProvider {
     try {
       const { flightOffer, travelers, contacts } = orderData;
 
+      // Get passenger IDs from the offer - CRITICAL for Duffel
+      const offerPassengerIds = flightOffer.passengers?.map(p => p.id) || [];
+      
+      console.log('📋 Offer Passenger IDs:', offerPassengerIds);
+      console.log('👥 Travelers count:', travelers.length);
+
       // Build Duffel order request
       const orderRequest = {
         data: {
@@ -139,6 +145,9 @@ class DuffelFlightProvider extends IFlightProvider {
             currency: flightOffer.total_currency
           }],
           passengers: travelers.map((traveler, index) => {
+            // CRITICAL: Use passenger ID from the offer, not from traveler input
+            const duffelPassengerId = offerPassengerIds[index] || `passenger_${index}`;
+            
             // Convert gender format: MALE/FEMALE → m/f
             const genderUpper = traveler.gender.toUpperCase();
             const duffelGender = genderUpper === 'MALE' ? 'm' : 'f';
@@ -156,8 +165,10 @@ class DuffelFlightProvider extends IFlightProvider {
               phoneNumber = `+${countryCode}${phoneNumber}`;
             }
             
+            console.log(`👤 Passenger ${index + 1}: ${traveler.firstName} ${traveler.lastName} → Duffel ID: ${duffelPassengerId}`);
+            
             return {
-              id: traveler.id || `passenger_${index}`,
+              id: duffelPassengerId,  // Use Duffel's passenger ID from offer
               title: title,
               gender: duffelGender,
               given_name: traveler.firstName.toUpperCase(),

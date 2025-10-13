@@ -24,6 +24,7 @@ const contentRoutes = require('./routes/content');
 const contactRoutes = require('./routes/contact');
 const newsletterRoutes = require('./routes/newsletter');
 const reviewRoutes = require('./routes/reviews');
+const airportRoutes = require('./routes/airports');
 
 // Phase 1 - Core Foundation routes
 const agencyRoutes = require('./routes/agency');
@@ -137,12 +138,14 @@ app.use('/api/flights', flightRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/travelers', bookingRoutes); // Traveler routes are in bookingController
 app.use('/api/payments', paymentRoutes);
 app.use('/api/visas', visaRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/airports', airportRoutes);
 
 // Phase 1 - Core Foundation routes
 app.use('/api/agency', agencyRoutes);

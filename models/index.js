@@ -35,6 +35,9 @@ const Traveler = require('./Traveler');
 const TravelerDocument = require('./TravelerDocument');
 const FlightSegment = require('./FlightSegment');
 
+// Airport Models
+const { Airport, AirportGroup } = require('./Airport');
+
 // Define associations
 
 // Agency & Branch associations
@@ -159,5 +162,8 @@ module.exports = {
   FlightOrder,
   Traveler,
   TravelerDocument,
-  FlightSegment
+  FlightSegment,
+  // Airport Models
+  Airport,
+  AirportGroup
 };

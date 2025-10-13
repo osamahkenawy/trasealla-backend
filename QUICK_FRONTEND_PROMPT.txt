@@ -1,0 +1,569 @@
+═══════════════════════════════════════════════════════════════════
+✈️ TRASEALLA FLIGHT BOOKING UI - COMPLETE IMPLEMENTATION REQUEST
+═══════════════════════════════════════════════════════════════════
+
+Create a professional flight booking system for a travel agency.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- React 18+ with TypeScript
+- Tailwind CSS + Shadcn UI components
+- React Query (TanStack Query) for API calls
+- React Hook Form + Zod validation
+- Zustand for state management
+- React Router v6 for routing
+- Axios for HTTP requests
+- Date-fns for date handling
+- Lucide React for icons
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔌 API ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Base URL: http://localhost:5001/api
+
+PUBLIC (No Auth):
+1. GET /airports/search?q={query}&limit=10
+2. GET /flights/search?origin=DXB&destination=JFK&departureDate=2025-12-15&returnDate=2025-12-22&adults=2&travelClass=ECONOMY&currencyCode=AED
+
+PROTECTED (Requires Bearer Token):
+3. POST /flights/confirm-price { flightOffer }
+4. POST /flights/seat-maps { flightOffer }
+5. POST /flights/create-order { flightOffer, travelers, selectedSeats }
+6. GET /flights/my-orders
+7. GET /flights/orders/:orderId
+8. DELETE /flights/orders/:orderId
+
+AUTH:
+- POST /auth/login { email, password }
+- POST /auth/register { firstName, lastName, email, password }
+- Token is returned in response.data.token
+- Include in all protected requests: Authorization: Bearer {token}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 PAGES TO CREATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. /flights/search - Flight Search & Results Page
+2. /flights/booking/:offerId - Booking Page (travelers, seats, payment)
+3. /my-bookings - User's Flight Bookings List
+4. /my-bookings/:bookingId - Booking Details Page
+5. /login - Login Page
+6. /register - Registration Page
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PAGE 1: FLIGHT SEARCH & RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SEARCH FORM COMPONENTS:
+┌─────────────────────────────────────────────────────────────┐
+│ 🔵 One-way  ⚪ Round-trip  ⚪ Multi-city                    │
+├─────────────────────────────────────────────────────────────┤
+│ FROM: [🔍 Dubai (DXB)          ] → [🔍 New York (JFK)    ] │
+│       Autocomplete airport              Autocomplete        │
+├─────────────────────────────────────────────────────────────┤
+│ DATES: [📅 Dec 15, 2025] → [📅 Dec 22, 2025]              │
+│        Date Picker           Date Picker (round trip only) │
+├─────────────────────────────────────────────────────────────┤
+│ PASSENGERS:  [- 2 Adults +]  [- 0 Children +]  [- 0 Infants +] │
+├─────────────────────────────────────────────────────────────┤
+│ CLASS: [Economy ▼]        ☑ Direct flights only            │
+├─────────────────────────────────────────────────────────────┤
+│              [ 🔍 SEARCH FLIGHTS ]                          │
+└─────────────────────────────────────────────────────────────┘
+
+AIRPORT AUTOCOMPLETE:
+- Debounced search (300ms delay)
+- Shows: "DXB - Dubai, United Arab Emirates"
+- Groups multiple airports by country
+- Minimum 2 characters to search
+- Loading spinner while searching
+- "No results found" state
+
+RESULTS LAYOUT:
+┌──────────────┬────────────────────────────────────────────┐
+│  FILTERS     │  RESULTS (showing 50 flights)             │
+│              │  Sort by: [Cheapest ▼]                    │
+├──────────────┼────────────────────────────────────────────┤
+│ Price Range  │ ┌────────────────────────────────────────┐ │
+│ $500 - $3000 │ │ ✈️ Emirates EK202  💺 9 seats left    │ │
+│ [═══○══════] │ │ 03:05 DXB → 08:35 JFK  Duration: 13h30m│ │
+│              │ │ Terminal 3    Terminal 4   Nonstop     │ │
+│ Airlines     │ │ Economy • 30kg baggage                 │ │
+│ ☑ Emirates   │ │ AED 3,500 per person   [Select →]     │ │
+│ ☐ Etihad     │ └────────────────────────────────────────┘ │
+│ ☐ Fly Dubai  │                                            │
+│              │ ┌────────────────────────────────────────┐ │
+│ Stops        │ │ [Next flight card...]                  │ │
+│ 🔵 Nonstop   │ └────────────────────────────────────────┘ │
+│ ⚪ 1 Stop    │                                            │
+│ ⚪ 2+ Stops  │                                            │
+│              │                                            │
+│ Departure    │                                            │
+│ ☐ Morning    │                                            │
+│ ☐ Afternoon  │                                            │
+│ ☐ Evening    │                                            │
+│              │                                            │
+│ [Clear All]  │                                            │
+└──────────────┴────────────────────────────────────────────┘
+
+FLIGHT CARD DETAILS (Click to expand):
+┌──────────────────────────────────────────────────────────────┐
+│ OUTBOUND: Dec 15, 2025                                       │
+│ ────────────────────────────────────────────────────────────│
+│ 03:05 DXB Terminal 3                                         │
+│   ↓  Emirates EK202 • Boeing 777-300 • Economy Class        │
+│   ↓  Flight time: 14h 30m                                    │
+│ 08:35 JFK Terminal 4                                         │
+│                                                              │
+│ RETURN: Dec 22, 2025 (if round trip)                        │
+│ ────────────────────────────────────────────────────────────│
+│ [Similar display for return flight]                         │
+│                                                              │
+│ PRICE BREAKDOWN:                                             │
+│ Base Fare (2 adults)         AED 3,200                       │
+│ Taxes & Fees                 AED   300                       │
+│ ────────────────────────────────────                        │
+│ Total                        AED 3,500                       │
+│                                                              │
+│ BAGGAGE:                                                     │
+│ ✓ Cabin: 7kg hand baggage                                   │
+│ ✓ Checked: 30kg per person                                  │
+│                                                              │
+│ FARE CONDITIONS:                                             │
+│ ⚠️ Non-refundable                                            │
+│ ✓ Date changes allowed (fee applies)                        │
+│                                                              │
+│              [SELECT THIS FLIGHT →]                          │
+└──────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PAGE 2: BOOKING PAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROGRESS INDICATOR:
+[✓ Select Flight] → [● Traveler Details] → [○ Seats] → [○ Payment] → [○ Confirm]
+
+STEP 1: CONFIRM PRICE (Automatic)
+- Show loading: "Confirming latest prices..."
+- If price changed: Show warning alert
+- Display updated price
+
+STEP 2: TRAVELER INFORMATION
+┌──────────────────────────────────────────────────────────────┐
+│ PASSENGER 1 (Adult)                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Title: [Mr ▼]                                                │
+│ First Name: [John                ] (as on passport)          │
+│ Last Name:  [Doe                 ] (as on passport)          │
+│ Date of Birth: [📅 May 15, 1990  ]                          │
+│ Gender: 🔵 Male  ⚪ Female                                   │
+│ Nationality: [United States ▼]                               │
+│                                                              │
+│ PASSPORT DETAILS:                                            │
+│ Passport Number: [AB1234567       ]                         │
+│ Issuing Country: [United States ▼ ]                         │
+│ Issue Date: [📅 Jan 1, 2020]  Expiry: [📅 Jan 1, 2030]     │
+├──────────────────────────────────────────────────────────────┤
+│ CONTACT INFORMATION (for booking confirmation)               │
+│ Email: [john.doe@example.com              ]                 │
+│ Phone: [+971] [501234567]                                   │
+│        Country    Number                                     │
+├──────────────────────────────────────────────────────────────┤
+│ SPECIAL REQUESTS (optional)                                  │
+│ Meal Preference: [Vegetarian ▼]                             │
+│ ☐ Wheelchair assistance                                      │
+│ Additional Notes: [________________________]                 │
+└──────────────────────────────────────────────────────────────┘
+
+[If 2+ passengers, repeat form for each]
+
+[Continue to Seat Selection →]
+
+STEP 3: SEAT SELECTION (Optional)
+┌──────────────────────────────────────────────────────────────┐
+│ SELECT SEATS FOR PASSENGER 1: John Doe                      │
+│                                                              │
+│ Segment: DXB → JFK (Emirates EK202)                         │
+│                                                              │
+│        A  B  C    D  E  F  G    H  J  K                     │
+│     ┌────────────────────────────────────┐                  │
+│ 1   │ ■  ■  ■    [🚪]        ■  ■  ■ │ Exit              │
+│ 2   │ ■  ■  ■              ■  ■  ■ │ Exit              │
+│ 3   │ 🟩 🟩 ■              ■  🟩 🟩 │                   │
+│ ... │ ...                             │                   │
+│ 12  │ 🟩 🔵 🟩    🟩 🟩 🟩 🟩    🟩 🟩 🟩 │ ← Selected: 12B│
+│ ... │ ...                             │                   │
+│     └────────────────────────────────────┘                  │
+│                                                              │
+│ Legend:                                                      │
+│ 🟩 Available  🔵 Your Selection  ■ Occupied  🟨 Extra Fee  │
+│                                                              │
+│ Selected Seat: 12B (Window, AED 150)                        │
+│                                                              │
+│ [Skip Seat Selection]    [Confirm Seats →]                  │
+└──────────────────────────────────────────────────────────────┘
+
+STEP 4: REVIEW & PAYMENT
+┌──────────────────────────────────────────────────────────────┐
+│ BOOKING SUMMARY                                              │
+├──────────────────────────────────────────────────────────────┤
+│ FLIGHT DETAILS:                                              │
+│ ✈️ DXB → JFK   Dec 15, 2025   Emirates EK202               │
+│ ✈️ JFK → DXB   Dec 22, 2025   Emirates EK203               │
+│                                                              │
+│ PASSENGERS:                                                  │
+│ 1. John Doe (Adult) - Seat 12B                              │
+│ 2. Jane Doe (Adult) - Seat 12C                              │
+│                                                              │
+│ PRICE BREAKDOWN:                                             │
+│ Flight Fare (2 adults)       AED 3,500                       │
+│ Seat Selection (2 seats)     AED   300                       │
+│ Taxes & Fees                 AED   300                       │
+│ ─────────────────────────────────────                       │
+│ TOTAL                        AED 4,100                       │
+│                                                              │
+│ PAYMENT METHOD:                                              │
+│ 🔵 Credit/Debit Card                                         │
+│    [Card Number: 1234 5678 9012 3456]                       │
+│    [Exp: 12/25] [CVV: 123]                                  │
+│                                                              │
+│ ☑ I agree to terms and conditions                           │
+│                                                              │
+│ ⚠️ Price may change. You'll pay the final confirmed price.  │
+│                                                              │
+│           [← Back]  [CONFIRM & PAY AED 4,100 →]             │
+└──────────────────────────────────────────────────────────────┘
+
+STEP 5: CONFIRMATION
+┌──────────────────────────────────────────────────────────────┐
+│                      ✅ BOOKING CONFIRMED!                   │
+│                                                              │
+│           Your flight has been successfully booked           │
+│                                                              │
+│ BOOKING REFERENCE: ABC123                                    │
+│ PNR: EKABC123                                                │
+│                                                              │
+│ Confirmation sent to: john.doe@example.com                   │
+│                                                              │
+│ [📧 Email Ticket] [📥 Download PDF] [📱 Add to Wallet]      │
+│                                                              │
+│ [View Booking Details →]  [Book Another Flight]              │
+└──────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PAGE 3: MY BOOKINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌──────────────────────────────────────────────────────────────┐
+│ MY FLIGHT BOOKINGS                                           │
+│                                                              │
+│ [Upcoming] [Past] [Cancelled]                                │
+├──────────────────────────────────────────────────────────────┤
+│ ┌────────────────────────────────────────────────────────┐  │
+│ │ ✈️ DXB → JFK → DXB              🟢 Confirmed          │  │
+│ │ Dec 15 - Dec 22, 2025                                  │  │
+│ │ Booking Ref: ABC123 • PNR: EKABC123                    │  │
+│ │ Passengers: John Doe, Jane Doe (2 adults)             │  │
+│ │ Total Paid: AED 4,100                                  │  │
+│ │                                                        │  │
+│ │ [View Details →] [Download Ticket] [Cancel Booking]   │  │
+│ └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│ ┌────────────────────────────────────────────────────────┐  │
+│ │ [Next booking card...]                                 │  │
+│ └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 PAGE 4: BOOKING DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Full itinerary with:
+- All flight segments
+- Passenger details
+- Ticket numbers
+- Baggage information
+- Check-in instructions
+- Actions: Download, Email, Cancel
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 AUTH PAGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LOGIN:
+- Email field
+- Password field
+- Remember me checkbox
+- Login button
+- "Don't have account? Register"
+- On success: Save token to localStorage, redirect to home
+
+REGISTER:
+- First Name, Last Name
+- Email
+- Password (with strength indicator)
+- Confirm Password
+- Register button
+- "Already have account? Login"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 STATE MANAGEMENT (Zustand Store)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface FlightStore {
+  // Search
+  searchParams: SearchParams | null
+  searchResults: FlightOffer[]
+  isSearching: boolean
+  
+  // Selected Flight
+  selectedFlight: FlightOffer | null
+  confirmedFlight: FlightOffer | null
+  
+  // Booking
+  travelers: TravelerInfo[]
+  selectedSeats: Record<string, Record<string, string>>
+  bookingInProgress: boolean
+  currentBooking: FlightOrder | null
+  
+  // Actions
+  searchFlights: (params) => Promise<void>
+  selectFlight: (flight) => void
+  confirmPrice: (flight) => Promise<FlightOffer>
+  addTraveler: (traveler) => void
+  selectSeat: (passengerId, segmentId, seatNumber) => void
+  createBooking: (data) => Promise<FlightOrder>
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 DESIGN REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COLORS:
+- Primary: Blue (#0066FF) - Buttons, links
+- Success: Green (#00C853) - Confirmed, Available
+- Warning: Orange (#FF9800) - Price changes, Limited seats
+- Error: Red (#F44336) - Errors, Unavailable
+- Neutral: Gray (#9E9E9E) - Occupied, Disabled
+
+RESPONSIVE BREAKPOINTS:
+- Mobile: < 768px
+- Tablet: 768px - 1024px
+- Desktop: > 1024px
+
+MOBILE OPTIMIZATIONS:
+- Bottom sheets for filters
+- Stack search form fields
+- Swipeable flight cards
+- Touch-friendly buttons (min 44px height)
+
+LOADING STATES:
+- Skeleton screens for search results
+- Spinner for API calls
+- Disabled buttons during loading
+
+ERROR HANDLING:
+- Toast notifications for errors
+- Inline validation errors
+- Retry buttons for failed requests
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ VALIDATION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SEARCH FORM:
+- Origin & destination required
+- Origin ≠ destination
+- Departure date >= today
+- Return date > departure date (if round trip)
+- At least 1 passenger
+
+TRAVELER FORM:
+- All names alphabetic, 2-50 characters
+- Date of birth: passenger must be < 120 years old
+- Adults: 18+ years, Children: 2-17 years, Infants: < 2 years
+- Passport number: alphanumeric, 6-15 characters
+- Passport expiry > travel date + 6 months
+- Email: valid format
+- Phone: valid international format
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 API INTEGRATION EXAMPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 1. Search Airports
+const searchAirports = async (query: string) => {
+  const response = await axios.get(
+    `${API_URL}/airports/search?q=${query}&limit=10`
+  )
+  return response.data.airports
+}
+
+// 2. Search Flights
+const searchFlights = async (params: SearchParams) => {
+  const queryString = new URLSearchParams(params).toString()
+  const response = await axios.get(
+    `${API_URL}/flights/search?${queryString}`
+  )
+  return response.data.data
+}
+
+// 3. Confirm Price
+const confirmPrice = async (flightOffer: FlightOffer) => {
+  const response = await axios.post(
+    `${API_URL}/flights/confirm-price`,
+    { flightOffer },
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  return response.data.data.flightOffers[0]
+}
+
+// 4. Create Booking
+const createBooking = async (bookingData: BookingData) => {
+  const response = await axios.post(
+    `${API_URL}/flights/create-order`,
+    bookingData,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  return response.data.data
+}
+
+// 5. Get My Bookings
+const getMyBookings = async () => {
+  const response = await axios.get(
+    `${API_URL}/flights/my-orders`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  return response.data.data
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 KEY FEATURES TO IMPLEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Debounced airport search (300ms)
+✅ Date validation (past dates, return before departure)
+✅ Price confirmation before payment
+✅ Multi-passenger support
+✅ Seat selection with visual seat map
+✅ Responsive design (mobile, tablet, desktop)
+✅ Loading states for all async operations
+✅ Error handling with user-friendly messages
+✅ Form validation with error messages
+✅ Token-based authentication
+✅ Protected routes (redirect to login if not authenticated)
+✅ Session persistence (localStorage)
+✅ Price change warnings
+✅ Booking confirmation with downloadable ticket
+✅ My bookings list with filters
+✅ Cancel booking functionality
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 PROJECT STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+src/
+├── components/
+│   ├── flights/
+│   │   ├── FlightSearchForm.tsx
+│   │   ├── AirportAutocomplete.tsx
+│   │   ├── FlightResultsList.tsx
+│   │   ├── FlightCard.tsx
+│   │   ├── FlightFilters.tsx
+│   │   ├── TravelerForm.tsx
+│   │   ├── SeatMap.tsx
+│   │   └── BookingReview.tsx
+│   ├── common/
+│   │   ├── Button.tsx
+│   │   ├── Input.tsx
+│   │   ├── DatePicker.tsx
+│   │   ├── Select.tsx
+│   │   └── Loader.tsx
+│   └── layout/
+│       ├── Header.tsx
+│       ├── Footer.tsx
+│       └── Layout.tsx
+├── pages/
+│   ├── flights/
+│   │   ├── SearchPage.tsx
+│   │   └── BookingPage.tsx
+│   ├── bookings/
+│   │   ├── MyBookingsPage.tsx
+│   │   └── BookingDetailsPage.tsx
+│   └── auth/
+│       ├── LoginPage.tsx
+│       └── RegisterPage.tsx
+├── services/
+│   ├── api.ts
+│   ├── flightService.ts
+│   ├── authService.ts
+│   └── airportService.ts
+├── stores/
+│   ├── flightStore.ts
+│   ├── authStore.ts
+│   └── bookingStore.ts
+├── hooks/
+│   ├── useFlightSearch.ts
+│   ├── useAuth.ts
+│   └── useBooking.ts
+├── types/
+│   ├── flight.types.ts
+│   ├── booking.types.ts
+│   └── auth.types.ts
+├── utils/
+│   ├── dateUtils.ts
+│   ├── formatters.ts
+│   └── validators.ts
+└── App.tsx
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 IMPLEMENTATION PRIORITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PHASE 1 (Core - Must Have):
+1. Authentication (Login/Register)
+2. Flight Search Form with Airport Autocomplete
+3. Flight Results Display with basic filters
+4. Flight Selection
+5. Traveler Information Form
+6. Basic Booking Creation (without seats)
+7. Booking Confirmation Page
+8. My Bookings List
+
+PHASE 2 (Enhanced):
+9. Seat Selection with Visual Seat Map
+10. Advanced Filters (price range, airlines, times)
+11. Sort Options
+12. Price Confirmation Step
+13. Booking Details Page
+14. Cancel Booking
+
+PHASE 3 (Polish):
+15. Loading Skeletons
+16. Error Handling & Toast Notifications
+17. Form Validation with Zod
+18. Mobile Responsive Design
+19. Animations & Transitions
+20. Download/Email Ticket
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 START HERE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please create a complete, production-ready implementation with:
+1. All pages and components as described
+2. Full TypeScript types
+3. Responsive design (mobile-first)
+4. Error handling and loading states
+5. Form validation
+6. API integration with proper error handling
+7. Authentication and protected routes
+8. Clean, maintainable code with comments
+9. Tailwind CSS styling
+10. Accessibility features (ARIA labels, keyboard navigation)
+
+Start with Phase 1 core features, then move to Phase 2 and 3.
+
+═══════════════════════════════════════════════════════════════════
+

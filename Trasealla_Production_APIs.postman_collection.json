@@ -30,9 +30,18 @@
                   "if (pm.response.code === 201 || pm.response.code === 200) {",
                   "    var jsonData = pm.response.json();",
                   "    if (jsonData.data && jsonData.data.token) {",
-                  "        pm.environment.set('authToken', jsonData.data.token);",
-                  "        pm.environment.set('userId', jsonData.data.user.id);",
-                  "        console.log('✅ Token saved:', jsonData.data.token);",
+                  "        // Save to both collection and environment variables",
+                  "        pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "        pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "        ",
+                  "        // Also save to environment if one is active",
+                  "        if (pm.environment.name) {",
+                  "            pm.environment.set('authToken', jsonData.data.token);",
+                  "            pm.environment.set('userId', jsonData.data.user.id);",
+                  "        }",
+                  "        ",
+                  "        console.log('✅ Registration Successful!');",
+                  "        console.log('🎫 Token saved and ready to use!');",
                   "    }",
                   "}"
                 ]
@@ -62,10 +71,23 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.environment.set('authToken', jsonData.data.token);",
-                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
-                  "    pm.environment.set('userId', jsonData.data.user.id);",
-                  "    console.log('✅ Logged in as:', jsonData.data.user.role);",
+                  "    ",
+                  "    // Save to both collection and environment variables",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken || '');",
+                  "    pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "    ",
+                  "    // Also save to environment if one is active",
+                  "    if (pm.environment.name) {",
+                  "        pm.environment.set('authToken', jsonData.data.token);",
+                  "        pm.environment.set('refreshToken', jsonData.data.refreshToken || '');",
+                  "        pm.environment.set('userId', jsonData.data.user.id);",
+                  "    }",
+                  "    ",
+                  "    console.log('✅ Login Successful!');",
+                  "    console.log('👤 User:', jsonData.data.user.firstName + ' ' + jsonData.data.user.lastName);",
+                  "    console.log('🔑 Role:', jsonData.data.user.role);",
+                  "    console.log('🎫 Token saved and ready to use!');",
                   "}"
                 ]
               }
@@ -120,27 +142,53 @@
       "item": [
         {
           "name": "1️⃣ Search Flights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        // Save first flight offer",
+                  "        pm.collectionVariables.set('confirmedFlightOffer', JSON.stringify(jsonData.data[0]));",
+                  "        pm.environment.set('confirmedFlightOffer', JSON.stringify(jsonData.data[0]));",
+                  "        console.log('✅ Found', jsonData.data.length, 'flights');",
+                  "        console.log('💾 First offer saved. Expires:', jsonData.data[0].expiresAt);",
+                  "        console.log('💰 Price:', jsonData.data[0].price.currency, jsonData.data[0].price.total);",
+                  "        console.log('');",
+                  "        console.log('⚠️  IMPORTANT: Offer expires in ~20-30 minutes!');",
+                  "        console.log('📋 Next step: Run \"2️⃣ Confirm Price\" then \"4️⃣ Book Flight\"');",
+                  "    } else {",
+                  "        console.log('❌ No flights found');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {"type": "noauth"},
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/flights/search?origin=JFK&destination=DXB&departureDate=2025-12-15&adults=2&travelClass=ECONOMY&currencyCode=AED",
+              "raw": "{{baseUrl}}/api/flights/search?origin=DXB&destination=CAI&departureDate=2025-10-14&returnDate=2025-10-29&adults=1&travelClass=ECONOMY&currencyCode=USD&provider=duffel",
               "host": ["{{baseUrl}}"],
               "path": ["api", "flights", "search"],
               "query": [
-                {"key": "origin", "value": "JFK", "description": "Origin airport (IATA code)"},
-                {"key": "destination", "value": "DXB", "description": "Destination airport"},
-                {"key": "departureDate", "value": "2025-12-15", "description": "YYYY-MM-DD"},
-                {"key": "returnDate", "value": "2025-12-22", "disabled": true, "description": "For round trip"},
-                {"key": "adults", "value": "2"},
+                {"key": "origin", "value": "DXB", "description": "Origin airport (IATA code)"},
+                {"key": "destination", "value": "CAI", "description": "Destination airport"},
+                {"key": "departureDate", "value": "2025-10-14", "description": "YYYY-MM-DD"},
+                {"key": "returnDate", "value": "2025-10-29", "description": "For round trip"},
+                {"key": "adults", "value": "1"},
                 {"key": "children", "value": "0", "disabled": true},
                 {"key": "travelClass", "value": "ECONOMY", "description": "ECONOMY, BUSINESS, FIRST"},
-                {"key": "currencyCode", "value": "AED"},
+                {"key": "currencyCode", "value": "USD"},
+                {"key": "provider", "value": "duffel", "description": "duffel or amadeus"},
                 {"key": "nonStop", "value": "false", "disabled": true},
                 {"key": "maxResults", "value": "50", "disabled": true}
               ]
             },
-            "description": "Search available flights - No authentication required"
+            "description": "Search available flights - Auto-saves first offer for booking"
           }
         },
         {
@@ -152,8 +200,15 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.environment.set('confirmedFlightOffer', JSON.stringify(jsonData.data));",
-                  "    console.log('✅ Price confirmed. Ready to book.');",
+                  "    if (jsonData.data && jsonData.data.flightOffers && jsonData.data.flightOffers.length > 0) {",
+                  "        // Save confirmed offer",
+                  "        var confirmedOffer = jsonData.data.flightOffers[0];",
+                  "        pm.collectionVariables.set('confirmedFlightOffer', JSON.stringify(confirmedOffer));",
+                  "        pm.environment.set('confirmedFlightOffer', JSON.stringify(confirmedOffer));",
+                  "        console.log('✅ Price confirmed!');",
+                  "        console.log('💰 Final Price:', confirmedOffer.price.currency, confirmedOffer.price.grandTotal);",
+                  "        console.log('📋 Next: Run \"4️⃣ Book Flight\" immediately');",
+                  "    }",
                   "}"
                 ]
               }
@@ -1041,6 +1096,203 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "reports", "bookings-metrics"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Airports",
+      "item": [
+        {
+          "name": "Get All Airports",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports?limit=100&active=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "Maximum number of airports to return"
+                },
+                {
+                  "key": "active",
+                  "value": "true",
+                  "description": "Filter by active status"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search term for airport code, title, city, or country",
+                  "disabled": true
+                },
+                {
+                  "key": "country",
+                  "value": "",
+                  "description": "Filter by country",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all airports with automatic grouping by country"
+          }
+        },
+        {
+          "name": "Search Airports (Autocomplete)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/search?q=dubai&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "dubai",
+                  "description": "Search query (minimum 2 characters)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum number of results"
+                }
+              ]
+            },
+            "description": "Search airports with autocomplete functionality"
+          }
+        },
+        {
+          "name": "Get Airport by Code",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/DXB",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "DXB"]
+            },
+            "description": "Get a single airport by its IATA code"
+          }
+        },
+        {
+          "name": "Get Airports by Country",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/country/India",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "country", "India"]
+            },
+            "description": "Get all airports in a specific country"
+          }
+        },
+        {
+          "name": "Create Airport (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"JFK\",\n  \"title\": \"John F. Kennedy International Airport\",\n  \"city\": \"New York\",\n  \"country\": \"United States\",\n  \"country_code\": \"US\",\n  \"timezone\": \"America/New_York\",\n  \"latitude\": 40.6413,\n  \"longitude\": -73.7781\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/airports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports"]
+            },
+            "description": "Create a new airport (Admin only)"
+          }
+        },
+        {
+          "name": "Bulk Create Airports (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"airports\": [\n    {\n      \"code\": \"LAX\",\n      \"title\": \"Los Angeles International Airport\",\n      \"city\": \"Los Angeles\",\n      \"country\": \"United States\",\n      \"country_code\": \"US\",\n      \"timezone\": \"America/Los_Angeles\",\n      \"latitude\": 33.9416,\n      \"longitude\": -118.4085\n    },\n    {\n      \"code\": \"ORD\",\n      \"title\": \"O'Hare International Airport\",\n      \"city\": \"Chicago\",\n      \"country\": \"United States\",\n      \"country_code\": \"US\",\n      \"timezone\": \"America/Chicago\",\n      \"latitude\": 41.9742,\n      \"longitude\": -87.9073\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "bulk"]
+            },
+            "description": "Bulk create multiple airports (Admin only)"
+          }
+        },
+        {
+          "name": "Update Airport (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dubai International Airport - Updated\",\n  \"city\": \"Dubai\",\n  \"timezone\": \"Asia/Dubai\",\n  \"latitude\": 25.2532,\n  \"longitude\": 55.3657\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/DXB",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "DXB"]
+            },
+            "description": "Update an existing airport (Admin only)"
+          }
+        },
+        {
+          "name": "Toggle Airport Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/DXB/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "DXB", "toggle"]
+            },
+            "description": "Toggle airport active status (Admin only)"
+          }
+        },
+        {
+          "name": "Delete Airport (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/JFK",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "JFK"]
+            },
+            "description": "Delete an airport (Admin only)"
           }
         }
       ]

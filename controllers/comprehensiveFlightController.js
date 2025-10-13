@@ -1,5 +1,6 @@
 const FlightProviderFactory = require('../services/FlightProviderFactory');
-const { FlightOrder, Booking, User, AuditLog, sequelize } = require('../models');
+const { FlightOrder, Booking, User, AuditLog, Traveler, TravelerDocument, FlightSegment, sequelize } = require('../models');
+const { saveTravelersToDb, saveFlightSegmentsToDb } = require('../utils/saveTravelersToDb');
 const { Op } = require('sequelize');
 
 // Get flight provider (Amadeus or Duffel based on config)
@@ -161,6 +162,42 @@ exports.createFlightOrder = async (req, res) => {
       });
     }
 
+    // Check for duplicate booking (idempotency)
+    const offerId = flightOffer.id || flightOffer.raw?.id;
+    const existingOrder = await FlightOrder.findOne({
+      where: {
+        userId: req.user.id,
+        flightOfferData: {
+          [Op.like]: `%${offerId}%`
+        },
+        status: { [Op.notIn]: ['cancelled', 'failed'] }
+      }
+    });
+
+    if (existingOrder) {
+      console.log(`⚠️ Duplicate booking attempt detected for offer ${offerId}`);
+      
+      // Return existing booking instead of error
+      const booking = await Booking.findByPk(existingOrder.bookingId, {
+        include: [
+          {
+            model: FlightOrder,
+            as: 'flightOrders'
+          }
+        ]
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'This flight was already booked. Returning existing booking.',
+        duplicate: true,
+        data: {
+          order: existingOrder,
+          booking
+        }
+      });
+    }
+
     // Accept both transformed format or direct format
     if (flightOffer.raw) {
       flightOffer = flightOffer.raw;
@@ -176,6 +213,22 @@ exports.createFlightOrder = async (req, res) => {
         message: 'Invalid flight offer format',
         hint: 'Send the complete offer object from search results or confirm-price endpoint'
       });
+    }
+
+    // Check if Duffel offer has expired
+    if (isDuffelOffer && flightOffer.expires_at) {
+      const expiryDate = new Date(flightOffer.expires_at);
+      const now = new Date();
+      
+      if (expiryDate < now) {
+        return res.status(400).json({
+          success: false,
+          message: 'Flight offer has expired',
+          expired: true,
+          expiresAt: flightOffer.expires_at,
+          hint: 'Please search for flights again to get a fresh offer'
+        });
+      }
     }
 
     // Validate travelers
@@ -194,12 +247,35 @@ exports.createFlightOrder = async (req, res) => {
     
     console.log(`Creating order with ${flightProvider.providerName}`);
     
-    const amadeusOrder = await flightProvider.createFlightOrder({
+    // Set timeout for provider call (30 seconds)
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Booking request timed out. Order may have been created. Check your bookings.')), 30000)
+    );
+    
+    const bookingPromise = flightProvider.createFlightOrder({
       flightOffer,
       travelers,
       contacts,
       remarks
     });
+    
+    let amadeusOrder;
+    try {
+      amadeusOrder = await Promise.race([bookingPromise, timeoutPromise]);
+    } catch (error) {
+      if (error.message.includes('timed out')) {
+        // Timeout - order might be created on provider side
+        console.error('⚠️ Booking timeout - order may have been created');
+        
+        return res.status(202).json({
+          success: false,
+          message: 'Booking request timed out. Please check your bookings in a few minutes.',
+          timeout: true,
+          action: 'Check /api/flights/my-orders in 1-2 minutes'
+        });
+      }
+      throw error;
+    }
 
     // Calculate pricing (handle both Amadeus and Duffel formats)
     const totalAmount = flightOffer.price?.grandTotal 
@@ -271,6 +347,14 @@ exports.createFlightOrder = async (req, res) => {
 
     // Update booking referenceId to point to flight order
     await booking.update({ referenceId: flightOrder.id });
+
+    // Save travelers to normalized tables
+    const savedTravelers = await saveTravelersToDb(booking.id, travelers);
+    console.log(`✅ Saved ${savedTravelers.length} travelers to database`);
+
+    // Save flight segments to normalized table
+    const savedSegments = await saveFlightSegmentsToDb(flightOrder.id, flightOffer);
+    console.log(`✅ Saved ${savedSegments.length} flight segments to database`);
 
     // Log order creation
     await AuditLog.create({
