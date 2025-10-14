@@ -192,6 +192,31 @@
           }
         },
         {
+          "name": "🌍 Search Locations (Airports & Cities)",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/locations?keyword=dubai&provider=duffel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "locations"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "dubai",
+                  "description": "Search keyword (minimum 2 characters)"
+                },
+                {
+                  "key": "provider",
+                  "value": "duffel",
+                  "description": "duffel or amadeus"
+                }
+              ]
+            },
+            "description": "Search airports and cities - Returns both airports and city options"
+          }
+        },
+        {
           "name": "2️⃣ Confirm Price",
           "event": [
             {
@@ -1144,7 +1169,7 @@
           }
         },
         {
-          "name": "Search Airports (Autocomplete)",
+          "name": "Search Airports (Local DB)",
           "request": {
             "auth": {
               "type": "noauth"
@@ -1152,7 +1177,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/airports/search?q=dubai&limit=10",
+              "raw": "{{baseUrl}}/api/airports/search?q=dubai&limit=10&source=local",
               "host": ["{{baseUrl}}"],
               "path": ["api", "airports", "search"],
               "query": [
@@ -1165,10 +1190,76 @@
                   "key": "limit",
                   "value": "10",
                   "description": "Maximum number of results"
+                },
+                {
+                  "key": "source",
+                  "value": "local",
+                  "description": "local or duffel"
                 }
               ]
             },
-            "description": "Search airports with autocomplete functionality"
+            "description": "Search airports from local database (limited to seeded airports)"
+          }
+        },
+        {
+          "name": "Search Airports (Duffel API)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/duffel/search?q=dubai&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "duffel", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "dubai",
+                  "description": "Search query (minimum 1 character)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum number of results"
+                }
+              ]
+            },
+            "description": "Search airports from Duffel API (comprehensive, worldwide, always up-to-date)"
+          }
+        },
+        {
+          "name": "Search Airports (Auto-Duffel)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/airports/search?q=dubai&limit=10&source=duffel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "airports", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "dubai",
+                  "description": "Search query"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum number of results"
+                },
+                {
+                  "key": "source",
+                  "value": "duffel",
+                  "description": "Use Duffel API via source parameter"
+                }
+              ]
+            },
+            "description": "Search airports using source=duffel parameter (alternative method)"
           }
         },
         {

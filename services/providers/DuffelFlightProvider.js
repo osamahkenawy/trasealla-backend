@@ -351,6 +351,49 @@ class DuffelFlightProvider extends IFlightProvider {
     };
   }
 
+  /**
+   * Search places (airports, cities) for autocomplete
+   */
+  async searchPlaces(query) {
+    try {
+      const response = await this.client.get('/places/suggestions', {
+        params: {
+          query: query
+        }
+      });
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Duffel places search error:', error.response?.data || error);
+      throw this.handleDuffelError(error);
+    }
+  }
+
+  /**
+   * Search locations (airports and cities) - Compatible with Amadeus interface
+   */
+  async searchLocations(keyword) {
+    try {
+      const places = await this.searchPlaces(keyword);
+      
+      // Transform Duffel format to match Amadeus format
+      return places.map(place => ({
+        code: place.iata_code || place.iata_city_code,
+        name: place.name,
+        type: place.type === 'airport' ? 'AIRPORT' : 'CITY',
+        city: place.city_name || place.city?.name,
+        country: place.iata_country_code,
+        countryCode: place.iata_country_code,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        timezone: place.time_zone
+      }));
+    } catch (error) {
+      console.error('Duffel location search error:', error.response?.data || error);
+      throw this.handleDuffelError(error);
+    }
+  }
+
   handleDuffelError(error) {
     const errorData = error.response?.data;
     

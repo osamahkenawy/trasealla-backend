@@ -1,6 +1,7 @@
 const { Airport, AirportGroup } = require('../models/Airport');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+const FlightProviderFactory = require('../services/FlightProviderFactory');
 
 /**
  * Get all airports with automatic grouping
@@ -133,11 +134,16 @@ exports.getAirportByCode = async (req, res) => {
 };
 
 /**
- * Search airports with autocomplete
+ * Search airports with autocomplete (Local Database)
  */
 exports.searchAirports = async (req, res) => {
   try {
-    const { q, limit = 10 } = req.query;
+    const { q, limit = 10, source = 'local' } = req.query;
+
+    // Check if user wants to search from Duffel API
+    if (source === 'duffel') {
+      return exports.searchAirportsFromDuffel(req, res);
+    }
 
     if (!q || q.length < 2) {
       return res.json({
@@ -207,13 +213,120 @@ exports.searchAirports = async (req, res) => {
 
     res.json({
       airports: formattedAirports,
-      __typename: 'AirportAutocompleterResults'
+      __typename: 'AirportAutocompleterResults',
+      source: 'local'
     });
   } catch (error) {
     console.error('Error searching airports:', error);
     res.status(500).json({ 
       error: 'Failed to search airports',
       message: error.message 
+    });
+  }
+};
+
+/**
+ * Search airports from Duffel API (Real-time, always up-to-date)
+ */
+exports.searchAirportsFromDuffel = async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+
+    if (!q || q.length < 1) {
+      return res.json({
+        airports: [],
+        __typename: 'AirportAutocompleterResults',
+        source: 'duffel'
+      });
+    }
+
+    // Get Duffel provider
+    const duffelProvider = FlightProviderFactory.getProvider('duffel');
+    
+    // Search places from Duffel
+    const places = await duffelProvider.searchPlaces(q);
+    
+    // Transform Duffel response to our format
+    const formattedAirports = [];
+    const countryMap = new Map();
+    
+    // Filter only airports (not cities) and process
+    const airports = places
+      .filter(place => place.type === 'airport')
+      .slice(0, parseInt(limit));
+    
+    airports.forEach(place => {
+      // Extract city and country info
+      const cityName = place.city_name || place.city?.name || 'Unknown';
+      const countryCode = place.iata_country_code || 'Unknown';
+      
+      // Create a friendly title (e.g., "London Heathrow" or "Dubai")
+      let airportTitle = place.name;
+      // If airport name includes the city, use as is, otherwise prepend city
+      if (!place.name.toLowerCase().includes(cityName.toLowerCase())) {
+        airportTitle = `${cityName} ${place.name}`;
+      }
+      
+      const airportData = {
+        code: place.iata_code,
+        name: place.name,
+        title: airportTitle,
+        city: cityName,
+        country: cityName, // Use city as display country for now
+        countryCode: countryCode,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        timezone: place.time_zone,
+        icaoCode: place.icao_code
+      };
+      
+      // Group by city name for better organization
+      if (!countryMap.has(cityName)) {
+        countryMap.set(cityName, []);
+      }
+      countryMap.get(cityName).push(airportData);
+    });
+    
+    // Format response with grouping
+    countryMap.forEach((airportsInCity, cityName) => {
+      if (airportsInCity.length > 1) {
+        // Multiple airports in same city - create a group
+        formattedAirports.push({
+          __typename: 'AirportGroup',
+          codes: airportsInCity.map(a => a.code),
+          title: cityName,
+          country: `${cityName}, ${airportsInCity[0].countryCode}`,
+          subAirports: airportsInCity.map(airport => ({
+            code: airport.code,
+            title: airport.name,
+            country: `${cityName}, ${airport.countryCode}`,
+            __typename: 'SingleAirport'
+          }))
+        });
+      } else {
+        // Single airport
+        const airport = airportsInCity[0];
+        formattedAirports.push({
+          __typename: 'SingleAirport',
+          code: airport.code,
+          title: airport.name,
+          country: `${airport.city}, ${airport.countryCode}`
+        });
+      }
+    });
+
+    res.json({
+      airports: formattedAirports,
+      __typename: 'AirportAutocompleterResults',
+      source: 'duffel',
+      totalResults: places.length
+    });
+  } catch (error) {
+    console.error('Error searching airports from Duffel:', error);
+    res.status(500).json({ 
+      error: 'Failed to search airports',
+      message: error.message,
+      source: 'duffel'
     });
   }
 };

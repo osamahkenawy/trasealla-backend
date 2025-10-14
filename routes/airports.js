@@ -117,6 +117,13 @@ router.get('/', airportController.getAirports);
  *           type: integer
  *           default: 10
  *         description: Maximum number of results
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [local, duffel]
+ *           default: local
+ *         description: Data source (local DB or Duffel API)
  *     responses:
  *       200:
  *         description: Search results
@@ -126,6 +133,35 @@ router.get('/', airportController.getAirports);
  *               $ref: '#/components/schemas/AirportAutocompleterResults'
  */
 router.get('/search', airportController.searchAirports);
+
+/**
+ * @swagger
+ * /api/airports/duffel/search:
+ *   get:
+ *     summary: Search airports from Duffel API (comprehensive, always up-to-date)
+ *     tags: [Airports]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query (minimum 1 character)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of results
+ *     responses:
+ *       200:
+ *         description: Search results from Duffel
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AirportAutocompleterResults'
+ */
+router.get('/duffel/search', airportController.searchAirportsFromDuffel);
 
 /**
  * @swagger

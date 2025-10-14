@@ -650,7 +650,7 @@ exports.getMyFlightOrders = async (req, res) => {
         {
           model: Booking,
           as: 'booking',
-          attributes: ['id', 'bookingNumber', 'status']
+          attributes: ['id', 'bookingNumber', 'bookingStatus', 'paymentStatus']
         }
       ],
       limit: parseInt(limit),
@@ -670,9 +670,12 @@ exports.getMyFlightOrders = async (req, res) => {
     });
   } catch (error) {
     console.error('Get my flight orders error:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error fetching flight orders'
+      message: 'Error fetching flight orders',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -726,7 +729,7 @@ exports.getAllFlightOrders = async (req, res) => {
         {
           model: Booking,
           as: 'booking',
-          attributes: ['id', 'bookingNumber', 'status']
+          attributes: ['id', 'bookingNumber', 'bookingStatus', 'paymentStatus']
         }
       ],
       limit: parseInt(limit),
