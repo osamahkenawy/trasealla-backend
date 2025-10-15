@@ -25,6 +25,7 @@ const contactRoutes = require('./routes/contact');
 const newsletterRoutes = require('./routes/newsletter');
 const reviewRoutes = require('./routes/reviews');
 const airportRoutes = require('./routes/airports');
+const webhookRoutes = require('./routes/webhooks');
 
 // Phase 1 - Core Foundation routes
 const agencyRoutes = require('./routes/agency');
@@ -146,6 +147,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/airports', airportRoutes);
+app.use('/webhooks', webhookRoutes);
 
 // Phase 1 - Core Foundation routes
 app.use('/api/agency', agencyRoutes);

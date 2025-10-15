@@ -12,7 +12,18 @@ const {
   getFlightPriceAnalysis,
   getMyFlightOrders,
   getAllFlightOrders,
-  getFlightOrderStats
+  getFlightOrderStats,
+  downloadTicket,
+  emailTicket,
+  sendBookingConfirmation,
+  getAncillaryServices,
+  addAncillaryServices,
+  getOrderChangeOptions,
+  confirmOrderChange,
+  getRefundQuote,
+  processRefund,
+  getOrderDocuments,
+  downloadDuffelETicket
 } = require('../controllers/comprehensiveFlightController');
 
 const router = express.Router();
@@ -121,6 +132,30 @@ router.post('/create-order', protect, createFlightOrder);
 router.get('/my-orders', protect, getMyFlightOrders);
 router.get('/orders/:orderId', protect, getFlightOrderDetails);
 router.delete('/orders/:orderId', protect, cancelFlightOrder);
+
+// Step 7: Tickets (Download & Email)
+router.get('/orders/:orderId/ticket/download', protect, downloadTicket);
+router.post('/orders/:orderId/ticket/email', protect, emailTicket);
+router.post('/orders/:orderId/send-confirmation', protect, sendBookingConfirmation);
+
+// Duffel Documents (Tickets, Itineraries)
+router.get('/orders/:orderId/documents', protect, getOrderDocuments);
+
+// Duffel E-Ticket Download (Real airline ticket)
+router.get('/orders/:orderId/duffel-ticket', protect, downloadDuffelETicket);
+router.get('/orders/:orderId/duffel-eticket', protect, downloadDuffelETicket);
+
+// Step 8: Ancillary Services (Baggage, Meals, etc.)
+router.post('/offers/services', protect, getAncillaryServices);
+router.post('/orders/:orderId/add-services', protect, addAncillaryServices);
+
+// Step 9: Order Changes (Date/Flight modifications)
+router.post('/orders/:orderId/change-options', protect, getOrderChangeOptions);
+router.post('/orders/:orderId/change', protect, confirmOrderChange);
+
+// Step 10: Refunds & Cancellations
+router.get('/orders/:orderId/refund-quote', protect, getRefundQuote);
+router.post('/orders/:orderId/refund', protect, processRefund);
 
 // Admin/Agent only routes
 router.get('/orders', protect, authorize('admin', 'agent'), getAllFlightOrders);

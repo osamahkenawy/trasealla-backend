@@ -394,6 +394,120 @@ class DuffelFlightProvider extends IFlightProvider {
     }
   }
 
+  /**
+   * Get available ancillary services for an offer
+   */
+  async getAncillaryServices(offerId) {
+    try {
+      const response = await this.client.get(`/air/service_offers?offer_id=${offerId}`);
+      
+      return {
+        offerId,
+        services: response.data.data.map(service => ({
+          id: service.id,
+          type: service.type,
+          name: service.metadata?.name || service.type,
+          description: service.metadata?.description,
+          price: {
+            amount: service.total_amount,
+            currency: service.total_currency
+          },
+          passenger: service.passenger_id,
+          segment: service.segment_id
+        }))
+      };
+    } catch (error) {
+      console.error('Duffel ancillary services error:', error.response?.data || error);
+      throw this.handleDuffelError(error);
+    }
+  }
+
+  /**
+   * Add services to existing order
+   */
+  async addServicesToOrder(orderId, services) {
+    try {
+      // Create order change request
+      const changeRequest = {
+        data: {
+          order_id: orderId,
+          add_services: services.map(s => ({
+            id: s.serviceId,
+            quantity: s.quantity || 1
+          }))
+        }
+      };
+
+      const response = await this.client.post('/air/order_change_requests', changeRequest);
+      
+      return {
+        changeId: response.data.data.id,
+        additionalCost: response.data.data.change_total_amount,
+        currency: response.data.data.change_total_currency,
+        status: response.data.data.status
+      };
+    } catch (error) {
+      console.error('Duffel add services error:', error.response?.data || error);
+      throw this.handleDuffelError(error);
+    }
+  }
+
+  /**
+   * Get order change options (date change, passenger change, etc.)
+   */
+  async getOrderChangeOptions(orderId, changeParams) {
+    try {
+      const changeRequest = {
+        data: {
+          order_id: orderId,
+          ...changeParams
+        }
+      };
+
+      const response = await this.client.post('/air/order_change_offers', changeRequest);
+      
+      return response.data.data.map(offer => ({
+        id: offer.id,
+        changeType: offer.change_type,
+        newTotalAmount: offer.new_total_amount,
+        changeTotalAmount: offer.change_total_amount,
+        penaltyAmount: offer.penalty_total_amount,
+        currency: offer.new_total_currency,
+        newSlices: offer.slices,
+        expiresAt: offer.expires_at
+      }));
+    } catch (error) {
+      console.error('Duffel order change options error:', error.response?.data || error);
+      throw this.handleDuffelError(error);
+    }
+  }
+
+  /**
+   * Confirm order change
+   */
+  async confirmOrderChange(changeOfferId, payment) {
+    try {
+      const changeRequest = {
+        data: {
+          selected_order_change_offer: changeOfferId,
+          payment: payment
+        }
+      };
+
+      const response = await this.client.post('/air/order_changes', changeRequest);
+      
+      return {
+        changeId: response.data.data.id,
+        orderId: response.data.data.order_id,
+        status: response.data.data.status,
+        refundAmount: response.data.data.refund_amount
+      };
+    } catch (error) {
+      console.error('Duffel confirm order change error:', error.response?.data || error);
+      throw this.handleDuffelError(error);
+    }
+  }
+
   handleDuffelError(error) {
     const errorData = error.response?.data;
     

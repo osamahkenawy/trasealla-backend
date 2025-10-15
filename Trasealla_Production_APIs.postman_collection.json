@@ -324,6 +324,192 @@
           }
         },
         {
+          "name": "📥 Download Ticket PDF",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/ticket/download?travelerIndex=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "ticket", "download"],
+              "query": [
+                {
+                  "key": "travelerIndex",
+                  "value": "0",
+                  "description": "Index of traveler (0 for first passenger)"
+                }
+              ]
+            },
+            "description": "Download e-ticket as PDF"
+          }
+        },
+        {
+          "name": "📧 Email Ticket",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\",\n  \"travelerIndex\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/ticket/email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "ticket", "email"]
+            },
+            "description": "Send e-ticket via email"
+          }
+        },
+        {
+          "name": "📧 Send Booking Confirmation",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/send-confirmation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "send-confirmation"]
+            },
+            "description": "Send booking confirmation for all travelers"
+          }
+        },
+        {
+          "name": "🎫 Get Duffel Order Documents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "documents"]
+            },
+            "description": "Get available tickets and documents from Duffel API"
+          }
+        },
+        {
+          "name": "🎫 Download Duffel E-Ticket (Real)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/duffel-ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "duffel-ticket"]
+            },
+            "description": "Download real airline e-ticket from Duffel (same as dashboard)"
+          }
+        },
+        {
+          "name": "🎫 Download Duffel E-Ticket (Alternative URL)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/duffel-eticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "duffel-eticket"]
+            },
+            "description": "Download real airline e-ticket from Duffel (alternative URL)"
+          }
+        },
+        {
+          "name": "🎒 Get Ancillary Services",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flightOffer\": {{confirmedFlightOffer}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/offers/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "offers", "services"]
+            },
+            "description": "Get available ancillary services (baggage, meals, etc.)"
+          }
+        },
+        {
+          "name": "🎒 Add Services to Order",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    {\n      \"serviceId\": \"srv_00009...\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/add-services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "add-services"]
+            },
+            "description": "Add extra baggage, meals, or other services to existing order"
+          }
+        },
+        {
+          "name": "🔄 Get Order Change Options",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slices\": [\n    {\n      \"origin\": \"DXB\",\n      \"destination\": \"CAI\",\n      \"departure_date\": \"2025-10-20\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/change-options",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "change-options"]
+            },
+            "description": "Get options for changing flight dates or routes"
+          }
+        },
+        {
+          "name": "🔄 Confirm Order Change",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"changeOfferId\": \"och_0000...\",\n  \"payment\": {\n    \"type\": \"balance\",\n    \"amount\": \"50.00\",\n    \"currency\": \"USD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/change",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "change"]
+            },
+            "description": "Confirm and execute order change"
+          }
+        },
+        {
+          "name": "💰 Get Refund Quote",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/refund-quote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "refund-quote"]
+            },
+            "description": "Get estimated refund amount and cancellation policy"
+          }
+        },
+        {
+          "name": "💸 Process Refund",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/flights/orders/{{flightOrderId}}/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "flights", "orders", "{{flightOrderId}}", "refund"]
+            },
+            "description": "Cancel order and process refund"
+          }
+        },
+        {
           "name": "Cancel Flight Order",
           "request": {
             "method": "DELETE",
@@ -1121,6 +1307,34 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "reports", "bookings-metrics"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Webhooks",
+      "item": [
+        {
+          "name": "Duffel Webhook Handler",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-Duffel-Signature", "value": "webhook_signature_here", "description": "Webhook signature for verification"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"order.schedule_changed\",\n  \"data\": {\n    \"id\": \"ord_0000...\",\n    \"booking_reference\": \"ABC123\",\n    \"schedule_change\": {\n      \"previous_departure\": \"2025-12-15T10:00:00\",\n      \"new_departure\": \"2025-12-15T11:30:00\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/duffel",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "duffel"]
+            },
+            "description": "Receive Duffel webhook events (schedule changes, cancellations, etc.)"
           }
         }
       ]
