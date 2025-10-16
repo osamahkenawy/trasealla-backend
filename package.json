@@ -14,7 +14,13 @@
     "sitemap": "node scripts/generateSitemap.js",
     "seed": "node scripts/seedData.js",
     "drop:phase1": "node scripts/dropPhaseTables.js",
-    "db:fix": "node scripts/fixDatabase.js"
+    "db:fix": "node scripts/fixDatabase.js",
+    "deploy": "bash deploy.sh",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop trasealla-backend",
+    "pm2:restart": "pm2 restart trasealla-backend",
+    "pm2:logs": "pm2 logs trasealla-backend",
+    "pm2:status": "pm2 status"
   },
   "keywords": [
     "travel",
