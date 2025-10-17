@@ -61,6 +61,10 @@ set -e
 
 echo "📦 Pulling latest code from GitHub..."
 cd /var/www/trasealla/trasealla-backend || exit 1
+
+# Fix git ownership issue
+git config --global --add safe.directory /var/www/trasealla/trasealla-backend 2>/dev/null || true
+
 git pull origin main
 
 echo "📥 Installing dependencies..."
