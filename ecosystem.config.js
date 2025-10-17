@@ -27,10 +27,10 @@ module.exports = {
       user: 'root',
       host: '72.61.177.109',
       ref: 'origin/main',
-      repo: 'YOUR_GITHUB_REPO_URL',
-      path: '/var/www/trasealla-backend',
-      'post-deploy': 'npm install && pm2 reload ecosystem.config.js --env production',
-      'pre-setup': 'mkdir -p /var/www/trasealla-backend'
+      repo: 'https://github.com/osamahkenawy/trasealla-backend.git',
+      path: '/var/www/trasealla/trasealla-backend',
+      'post-deploy': 'npm install --production && pm2 reload ecosystem.config.js --env production',
+      'pre-setup': 'mkdir -p /var/www/trasealla/trasealla-backend'
     }
   }
 };

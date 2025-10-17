@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 # Configuration
 SERVER_USER="root"
 SERVER_HOST="72.61.177.109"
-APP_DIR="/var/www/trasealla-backend"
+APP_DIR="/var/www/trasealla/trasealla-backend"
 APP_NAME="trasealla-backend"
 
 # Function to print colored output
