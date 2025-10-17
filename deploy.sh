@@ -60,17 +60,18 @@ ssh ${SERVER_USER}@${SERVER_HOST} << 'ENDSSH'
 set -e
 
 echo "📦 Pulling latest code from GitHub..."
-cd /var/www/trasealla-backend || exit 1
+cd /var/www/trasealla/trasealla-backend || exit 1
 git pull origin main
 
 echo "📥 Installing dependencies..."
 npm install --production
 
 echo "🔄 Restarting application with PM2..."
-pm2 reload ecosystem.config.js --env production
+pm2 reload trasealla-backend --update-env
 
 echo "✅ Deployment completed successfully!"
 pm2 status
+pm2 logs trasealla-backend --lines 10
 ENDSSH
 
 print_success "Deployment completed!"
