@@ -9,6 +9,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001; // Changed to 5001 to avoid conflict with AirPlay on macOS
 
+// Trust proxy - Required when running behind Nginx/reverse proxy
+app.set('trust proxy', true);
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
